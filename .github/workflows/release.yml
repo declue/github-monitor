@@ -17,13 +17,13 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux
-            artifact: github-actions-runner-monitor-linux.tar.gz
+            artifact: jhl-github-desktop-linux.tar.gz
           - os: windows-latest
             platform: windows
-            artifact: github-actions-runner-monitor-windows.zip
+            artifact: jhl-github-desktop-windows.zip
           - os: macos-latest
             platform: macos
-            artifact: github-actions-runner-monitor-macos.zip
+            artifact: jhl-github-desktop-macos.zip
 
     steps:
       - name: Checkout code
@@ -82,42 +82,55 @@ jobs:
         with:
           name: Release ${{ steps.get_version.outputs.VERSION }}
           body: |
-            ## GitHub Actions Runner Monitor ${{ steps.get_version.outputs.VERSION }}
+            ## JHL GitHub Desktop ${{ steps.get_version.outputs.VERSION }}
 
-            ### Downloads
-            - **Windows**: `github-actions-runner-monitor-windows.zip`
-            - **macOS**: `github-actions-runner-monitor-macos.zip`
-            - **Linux**: `github-actions-runner-monitor-linux.tar.gz`
+            GitHub Actions Runner Monitor - 데스크톱 애플리케이션
 
-            ### Installation
+            **제작자**: JHL (declue)
+            **저장소**: https://github.com/declue/github-monitor
+
+            ### 다운로드
+            - **Windows**: `jhl-github-desktop-windows.zip`
+            - **macOS**: `jhl-github-desktop-macos.zip`
+            - **Linux**: `jhl-github-desktop-linux.tar.gz`
+
+            ### 설치 방법
 
             #### Windows
-            1. Download `github-actions-runner-monitor-windows.zip`
-            2. Extract the archive
-            3. Run `github-actions-runner-monitor.exe`
+            1. `jhl-github-desktop-windows.zip` 다운로드
+            2. 압축 해제
+            3. `jhl-github-desktop.exe` 실행
 
             #### macOS
-            1. Download `github-actions-runner-monitor-macos.zip`
-            2. Extract the archive
-            3. Run `GitHub Actions Runner Monitor.app` (or the executable inside)
+            1. `jhl-github-desktop-macos.zip` 다운로드
+            2. 압축 해제
+            3. `JHL GitHub Desktop.app` 실행
+            4. 보안 경고가 표시되면 앱을 마우스 오른쪽 버튼으로 클릭하고 "열기"를 선택하세요
 
             #### Linux
-            1. Download `github-actions-runner-monitor-linux.tar.gz`
-            2. Extract: `tar -xzf github-actions-runner-monitor-linux.tar.gz`
-            3. Run: `./github-actions-runner-monitor/github-actions-runner-monitor`
+            1. `jhl-github-desktop-linux.tar.gz` 다운로드
+            2. 압축 해제: `tar -xzf jhl-github-desktop-linux.tar.gz`
+            3. 실행: `./jhl-github-desktop/jhl-github-desktop`
 
-            ### Configuration
-            On first launch, configure your GitHub token and organizations in the settings dialog.
+            ### 초기 설정
+            첫 실행 시 설정 대화상자에서 GitHub 토큰과 조직을 구성하세요.
 
-            ### What's New
-            See the commit history for changes in this release.
+            ### 주요 기능
+            - 🚀 GitHub Actions 워크플로우 모니터링
+            - 📊 저장소, 러너, 이슈, PR 통합 뷰
+            - 🔍 강력한 검색 및 필터링
+            - 💾 로컬 저장소 (안전한 토큰 보관)
+            - ⚡ 빠른 네이티브 성능
+
+            ### 변경 사항
+            커밋 히스토리를 참조하세요.
 
             ---
-            🤖 Built with [Pyloid](https://github.com/pyloid/pyloid) | Generated with [Claude Code](https://claude.com/claude-code)
+            🤖 Built with [Pyloid](https://github.com/pyloid/pyloid) | Made by JHL (declue) | Generated with [Claude Code](https://claude.com/claude-code)
           files: |
-            artifacts/linux-build/github-actions-runner-monitor-linux.tar.gz
-            artifacts/windows-build/github-actions-runner-monitor-windows.zip
-            artifacts/macos-build/github-actions-runner-monitor-macos.zip
+            artifacts/linux-build/jhl-github-desktop-linux.tar.gz
+            artifacts/windows-build/jhl-github-desktop-windows.zip
+            artifacts/macos-build/jhl-github-desktop-macos.zip
           draft: false
           prerelease: false
         env:

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="240" fill="#24292f"/>
+
+  <!-- Outer Gear (GitHub Actions Symbol) -->
+  <g fill="#2aa198">
+    <!-- Gear teeth -->
+    <rect x="236" y="16" width="40" height="60" rx="8"/>
+    <rect x="236" y="436" width="40" height="60" rx="8"/>
+    <rect x="16" y="236" width="60" height="40" rx="8"/>
+    <rect x="436" y="236" width="60" height="40" rx="8"/>
+
+    <!-- Diagonal teeth -->
+    <rect x="100" y="100" width="50" height="50" rx="8" transform="rotate(-45 125 125)"/>
+    <rect x="362" y="100" width="50" height="50" rx="8" transform="rotate(45 387 125)"/>
+    <rect x="100" y="362" width="50" height="50" rx="8" transform="rotate(45 125 387)"/>
+    <rect x="362" y="362" width="50" height="50" rx="8" transform="rotate(-45 387 387)"/>
+  </g>
+
+  <!-- Gear Ring -->
+  <circle cx="256" cy="256" r="140" fill="none" stroke="#2aa198" stroke-width="35"/>
+
+  <!-- Inner Circle -->
+  <circle cx="256" cy="256" r="100" fill="#24292f"/>
+
+  <!-- Play Button (Actions Run) -->
+  <polygon points="236,226 236,286 296,256" fill="#ffffff"/>
+
+  <!-- GitHub Octocat Silhouette (subtle) -->
+  <g opacity="0.2" fill="#ffffff">
+    <circle cx="256" cy="180" r="15"/>
+    <path d="M 256 195 Q 240 200 235 220 L 235 240 Q 235 250 245 250 L 267 250 Q 277 250 277 240 L 277 220 Q 272 200 256 195 Z"/>
+  </g>
+
+  <!-- Brand Text -->
+  <text x="256" y="460" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#ffffff" text-anchor="middle" opacity="0.8">JHL</text>
+</svg>

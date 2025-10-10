@@ -75,7 +75,7 @@ function App() {
 
   const loadData = async () => {
     if (!token) {
-      setError('Please configure your GitHub token in settings');
+      setError('설정에서 GitHub 토큰을 구성해주세요');
       setLoading(false);
       setSettingsOpen(true);
       return;
@@ -104,7 +104,7 @@ function App() {
       setFilteredTreeData(treeWithEnabled); // Initialize filtered data
       setRateLimit(rate);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data');
+      setError(err instanceof Error ? err.message : '데이터 로딩 실패');
       console.error('Error loading data:', err);
     } finally {
       setLoading(false);
@@ -333,7 +333,7 @@ function App() {
           <Toolbar>
             <GitHub sx={{ mr: 2 }} />
             <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-              GitHub Actions Runner Monitor
+              JHL GitHub Desktop
             </Typography>
 
             {!isProduction && (
@@ -356,7 +356,7 @@ function App() {
 
             {rateLimit && <RateLimitDisplay rateLimit={rateLimit} />}
 
-            <Tooltip title="Settings">
+            <Tooltip title="설정">
               <IconButton
                 color="inherit"
                 onClick={() => setSettingsOpen(true)}
@@ -366,7 +366,7 @@ function App() {
               </IconButton>
             </Tooltip>
 
-            <Tooltip title="Refresh data">
+            <Tooltip title="데이터 새로고침">
               <IconButton
                 color="inherit"
                 onClick={loadData}
@@ -415,7 +415,7 @@ function App() {
 
           {!loading && !error && treeData.length === 0 && (
             <Alert severity="info">
-              No repositories found. Make sure your GitHub token is configured correctly.
+              저장소를 찾을 수 없습니다. GitHub 토큰이 올바르게 설정되었는지 확인하세요.
             </Alert>
           )}
 
@@ -437,7 +437,7 @@ function App() {
                 >
                   <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="h6">
-                      Tree View ({countTreeNodes(filteredTreeData)} items)
+                      트리 뷰 ({countTreeNodes(filteredTreeData)} 항목)
                     </Typography>
                   </Box>
                   <TreeView
@@ -467,11 +467,14 @@ function App() {
           }}
         >
           <Typography variant="body2" color="text.secondary">
-            GitHub Actions Runner Monitor v{versionInfo.version} - Monitor your development status at a glance
+            JHL GitHub Desktop v{versionInfo.version} - GitHub Actions Runner Monitor
+          </Typography>
+          <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+            제작자: JHL (declue) | Repository: github.com/declue/github-monitor
           </Typography>
           {isDevelopment && (
             <Typography variant="caption" color="warning.main" display="block" sx={{ mt: 0.5 }}>
-              Development Mode | Build: {versionInfo.buildDate}
+              개발 모드 | 빌드: {versionInfo.buildDate}
             </Typography>
           )}
         </Box>

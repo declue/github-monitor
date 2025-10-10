@@ -55,14 +55,14 @@ def create_archive():
     print("\n=== Creating Distribution Archive ===")
 
     dist_dir = Path(__file__).parent / "dist"
-    app_dir = dist_dir / "github-actions-runner-monitor"
+    app_dir = dist_dir / "jhl-github-desktop"
 
     if not app_dir.exists():
         raise Exception(f"Build output not found at {app_dir}")
 
     # Determine platform and create appropriate archive
     if sys.platform == "win32":
-        archive_name = "github-actions-runner-monitor-windows"
+        archive_name = "jhl-github-desktop-windows"
         shutil.make_archive(
             str(dist_dir / archive_name),
             'zip',
@@ -70,15 +70,15 @@ def create_archive():
         )
         print(f"✓ Created {archive_name}.zip")
     elif sys.platform == "darwin":
-        archive_name = "github-actions-runner-monitor-macos"
+        archive_name = "jhl-github-desktop-macos"
         # For macOS, look for .app bundle
-        app_bundle = dist_dir / "GitHub Actions Runner Monitor.app"
+        app_bundle = dist_dir / "JHL GitHub Desktop.app"
         if app_bundle.exists():
             shutil.make_archive(
                 str(dist_dir / archive_name),
                 'zip',
                 dist_dir,
-                "GitHub Actions Runner Monitor.app"
+                "JHL GitHub Desktop.app"
             )
         else:
             shutil.make_archive(
@@ -88,7 +88,7 @@ def create_archive():
             )
         print(f"✓ Created {archive_name}.zip")
     else:  # Linux
-        archive_name = "github-actions-runner-monitor-linux"
+        archive_name = "jhl-github-desktop-linux"
         shutil.make_archive(
             str(dist_dir / archive_name),
             'gztar',
@@ -99,7 +99,9 @@ def create_archive():
 
 def main():
     """Main build process"""
-    print("GitHub Actions Runner Monitor - Build Script")
+    print("JHL GitHub Desktop - Build Script")
+    print("=" * 50)
+    print("Author: JHL (declue)")
     print("=" * 50)
 
     try:

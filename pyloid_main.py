@@ -1,5 +1,9 @@
 """
-GitHub Actions Runner Monitor - Pyloid Desktop Application
+JHL GitHub Desktop - GitHub Actions Runner Monitor
+Pyloid Desktop Application
+
+Author: JHL (declue)
+Repository: https://github.com/declue/github-monitor
 """
 from pyloid import Pyloid, PyloidAPI, Bridge
 import sys
@@ -34,11 +38,11 @@ def main():
     backend_thread.start()
 
     # Create Pyloid app
-    app = Pyloid(app_name="GitHub Actions Runner Monitor")
+    app = Pyloid(app_name="JHL GitHub Desktop")
 
     # Set window properties
     window = app.create_window(
-        title="GitHub Actions Runner Monitor",
+        title="JHL GitHub Desktop - GitHub Actions Runner Monitor",
         width=1400,
         height=900,
         dev_tools=False

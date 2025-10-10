@@ -61,7 +61,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='github-actions-runner-monitor',
+    name='jhl-github-desktop',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -72,7 +72,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,  # Add icon path if available
+    icon='assets/icon.svg',  # Icon file
 )
 
 coll = COLLECT(
@@ -83,18 +83,21 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='github-actions-runner-monitor',
+    name='jhl-github-desktop',
 )
 
 # For macOS app bundle
 if sys.platform == 'darwin':
     app = BUNDLE(
         coll,
-        name='GitHub Actions Runner Monitor.app',
-        icon=None,  # Add icon path if available
-        bundle_identifier='com.github.actions.runner.monitor',
+        name='JHL GitHub Desktop.app',
+        icon='assets/icon.svg',
+        bundle_identifier='com.jhl.github.desktop',
         info_plist={
             'NSHighResolutionCapable': 'True',
             'LSBackgroundOnly': 'False',
+            'CFBundleShortVersionString': '0.0.1',
+            'CFBundleVersion': '0.0.1',
+            'NSHumanReadableCopyright': 'Copyright © 2025 JHL (declue). All rights reserved.',
         },
     )
