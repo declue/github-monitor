@@ -1,8 +1,8 @@
 [project]
-name = "pyloid-app"
+name = "github-desktop-clone"
 version = "1.0.0"
 readme = "README.md"
-description = "My first application"
+description = "GitHub Desktop Clone - Built with Pyloid"
 
 requires-python = ">=3.9"
 
@@ -10,7 +10,11 @@ dependencies = [
     "pyloid",
     "pyloid-adapter",
     "fastapi",
-    "uvicorn"
+    "uvicorn",
+    "httpx",
+    "python-dotenv",
+    "pydantic",
+    "pydantic-settings"
 ]
 
 [dependency-groups]
