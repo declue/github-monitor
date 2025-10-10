@@ -133,7 +133,9 @@ class GitHubClient:
             )
             response.raise_for_status()
             return response.json().get("runners", [])
-        except httpx.HTTPStatusError:
+        except httpx.HTTPStatusError as e:
+            # Log the error for debugging
+            print(f"Failed to get runners for {owner}/{repo}: {e.response.status_code} - {e.response.text}")
             return []
 
     async def get_branches(self, owner: str, repo: str) -> List[Dict[str, Any]]:
