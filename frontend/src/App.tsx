@@ -196,12 +196,30 @@ function App() {
       const children = await fetchRepoDetails(owner, repo, token, githubApiUrl);
       // Cache the result
       repoDetailsCache.current.set(cacheKey, children);
+
+      // Update treeData with loaded children
+      const updateNodeChildren = (nodes: TreeNode[]): TreeNode[] => {
+        return nodes.map(n => {
+          if (n.id === node.id) {
+            return { ...n, children, isLoaded: true };
+          }
+          if (n.children && n.children.length > 0) {
+            return { ...n, children: updateNodeChildren(n.children) };
+          }
+          return n;
+        });
+      };
+
+      const updatedTree = updateNodeChildren(treeData);
+      setTreeData(updatedTree);
+      setFilteredTreeData(updatedTree);
+
       return children;
     } catch (error) {
       console.error(`Failed to load details for ${owner}/${repo}:`, error);
       return [];
     }
-  }, [token, githubApiUrl]);
+  }, [token, githubApiUrl, treeData]);
 
   const expandAllRepositories = useCallback(async (nodes: TreeNode[], onlyEnabled: boolean = false): Promise<TreeNode[]> => {
     const expandedNodes: TreeNode[] = [];
