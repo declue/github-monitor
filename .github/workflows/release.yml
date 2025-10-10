@@ -61,22 +61,33 @@ jobs:
         if: matrix.platform == 'windows'
         working-directory: jhl-github-desktop-app
         run: |
-          Compress-Archive -Path dist/jhl-github-desktop -DestinationPath dist/jhl-github-desktop-windows.zip
+          mkdir release
+          cp dist/jhl-github-desktop.exe release/
+          echo "JHL GitHub Desktop - GitHub Actions Runner Monitor`n`nRun jhl-github-desktop.exe`n`nAuthor: JHL (declue)" | Out-File -FilePath release/README.txt -Encoding UTF8
+          Compress-Archive -Path release/* -DestinationPath dist/jhl-github-desktop-windows.zip
         shell: pwsh
 
       - name: Create archive (macOS)
         if: matrix.platform == 'macos'
         working-directory: jhl-github-desktop-app
         run: |
-          cd dist
-          zip -r jhl-github-desktop-macos.zip jhl-github-desktop.app
+          mkdir release
+          cp dist/jhl-github-desktop release/
+          chmod +x release/jhl-github-desktop
+          echo "JHL GitHub Desktop - GitHub Actions Runner Monitor\n\nRun: ./jhl-github-desktop\n\nAuthor: JHL (declue)" > release/README.txt
+          cd release
+          zip -r ../dist/jhl-github-desktop-macos.zip .
 
       - name: Create archive (Linux)
         if: matrix.platform == 'linux'
         working-directory: jhl-github-desktop-app
         run: |
-          cd dist
-          tar -czf jhl-github-desktop-linux.tar.gz jhl-github-desktop/
+          mkdir release
+          cp dist/jhl-github-desktop release/
+          chmod +x release/jhl-github-desktop
+          echo "JHL GitHub Desktop - GitHub Actions Runner Monitor\n\nRun: ./jhl-github-desktop\n\nAuthor: JHL (declue)" > release/README.txt
+          cd release
+          tar -czf ../dist/jhl-github-desktop-linux.tar.gz .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

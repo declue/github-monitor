@@ -28,6 +28,37 @@ else:
 
 
 if __name__ == '__main__':
+	# Hidden imports for FastAPI and dependencies
+	hidden_imports = [
+		'fastapi',
+		'fastapi.middleware',
+		'fastapi.middleware.cors',
+		'fastapi.staticfiles',
+		'fastapi.responses',
+		'starlette',
+		'starlette.middleware',
+		'starlette.middleware.cors',
+		'starlette.staticfiles',
+		'starlette.responses',
+		'uvicorn',
+		'uvicorn.logging',
+		'uvicorn.loops',
+		'uvicorn.loops.auto',
+		'uvicorn.protocols',
+		'uvicorn.protocols.http',
+		'uvicorn.protocols.http.auto',
+		'uvicorn.protocols.websockets',
+		'uvicorn.protocols.websockets.auto',
+		'uvicorn.lifespan',
+		'uvicorn.lifespan.on',
+		'pydantic',
+		'pydantic_core',
+		'pydantic_settings',
+		'httpx',
+		'anyio',
+		'sniffio',
+	]
+
 	# Build pyinstaller options
 	options = [
 		f'--name={name}',
@@ -35,11 +66,15 @@ if __name__ == '__main__':
 		f'--workpath={work_path}',
 		'--clean',
 		'--noconfirm',
-		'--onedir',
+		'--onefile',  # Single executable file
 		'--windowed',
 		'--add-data=./dist-front/:./dist-front/',
 		'--add-data=./backend/app/:./app/',
 	]
+
+	# Add hidden imports
+	for module in hidden_imports:
+		options.append(f'--hidden-import={module}')
 
 	# Add icons if available
 	if os.path.exists('./src-pyloid/icons/'):
@@ -49,10 +84,5 @@ if __name__ == '__main__':
 		options.append(f'--icon={icon}')
 
 	pyinstaller(main_script, options)
- 
-	if get_platform() == 'windows':
-		optimize(f'{dist_path}/{name}/_internal', optimize_spec)
-	elif get_platform() == 'macos':
-		optimize(f'{dist_path}/{name}.app', optimize_spec)
-	else:
-		optimize(f'{dist_path}/{name}/_internal', optimize_spec)
+
+	# No optimization needed for onefile mode
