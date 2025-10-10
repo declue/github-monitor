@@ -3,6 +3,7 @@ const STORAGE_KEY = 'github_explorer_settings';
 export interface Settings {
   token: string;
   orgs: string[];
+  githubApiUrl?: string;
 }
 
 export const saveSettings = (settings: Settings): void => {
@@ -17,7 +18,12 @@ export const loadSettings = (): Settings | null => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const settings = JSON.parse(stored);
+      // Provide default value for githubApiUrl if not set
+      return {
+        ...settings,
+        githubApiUrl: settings.githubApiUrl || 'https://api.github.com'
+      };
     }
   } catch (error) {
     console.error('Failed to load settings:', error);

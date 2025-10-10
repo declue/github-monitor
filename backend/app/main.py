@@ -20,9 +20,9 @@ app.add_middleware(
 default_github_client = GitHubClient() if settings.github_token else None
 
 
-def get_github_client(token: str) -> GitHubClient:
-    """Create a GitHub client with the provided token"""
-    return GitHubClient(token=token)
+def get_github_client(token: str, api_url: Optional[str] = None) -> GitHubClient:
+    """Create a GitHub client with the provided token and API URL"""
+    return GitHubClient(token=token, api_url=api_url)
 
 
 @app.on_event("shutdown")
@@ -32,7 +32,10 @@ async def shutdown_event():
 
 
 @app.get("/api/rate-limit", response_model=RateLimitInfo)
-async def get_rate_limit(x_github_token: Optional[str] = Header(None)):
+async def get_rate_limit(
+    x_github_token: Optional[str] = Header(None),
+    x_github_api_url: Optional[str] = Header(None)
+):
     """Get current GitHub API rate limit status"""
     try:
         # Use header token if provided, otherwise use default
@@ -40,7 +43,8 @@ async def get_rate_limit(x_github_token: Optional[str] = Header(None)):
         if not token:
             raise HTTPException(status_code=401, detail="GitHub token is required")
 
-        client = get_github_client(token)
+        api_url = x_github_api_url or "https://api.github.com"
+        client = get_github_client(token, api_url)
         data = await client.get_rate_limit()
         await client.close()
 
@@ -60,13 +64,15 @@ async def get_rate_limit(x_github_token: Optional[str] = Header(None)):
 @app.get("/api/tree", response_model=List[TreeNode])
 async def get_tree(
     orgs: Optional[str] = None,
-    x_github_token: Optional[str] = Header(None)
+    x_github_token: Optional[str] = Header(None),
+    x_github_api_url: Optional[str] = Header(None)
 ):
     """Get the complete repository tree structure
 
     Args:
         orgs: Comma-separated list of organizations/users to filter
         x_github_token: GitHub personal access token (in header)
+        x_github_api_url: GitHub API base URL (in header, for Enterprise support)
     """
     try:
         # Use header token if provided, otherwise use default
@@ -74,7 +80,8 @@ async def get_tree(
         if not token:
             raise HTTPException(status_code=401, detail="GitHub token is required")
 
-        client = get_github_client(token)
+        api_url = x_github_api_url or "https://api.github.com"
+        client = get_github_client(token, api_url)
         tree_nodes = []
 
         # Parse orgs parameter

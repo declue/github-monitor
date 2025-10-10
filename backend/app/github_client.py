@@ -4,10 +4,9 @@ from app.config import settings
 
 
 class GitHubClient:
-    BASE_URL = "https://api.github.com"
-
-    def __init__(self, token: Optional[str] = None):
+    def __init__(self, token: Optional[str] = None, api_url: Optional[str] = None):
         self.token = token or settings.github_token
+        self.base_url = api_url or "https://api.github.com"
         self.headers = {
             "Authorization": f"Bearer {self.token}",
             "Accept": "application/vnd.github+json",
@@ -17,13 +16,13 @@ class GitHubClient:
 
     async def get_rate_limit(self) -> Dict[str, Any]:
         """Get current GitHub API rate limit status"""
-        response = await self.client.get(f"{self.BASE_URL}/rate_limit")
+        response = await self.client.get(f"{self.base_url}/rate_limit")
         response.raise_for_status()
         return response.json()
 
     async def get_user_orgs(self) -> List[Dict[str, Any]]:
         """Get all organizations for the authenticated user"""
-        response = await self.client.get(f"{self.BASE_URL}/user/orgs")
+        response = await self.client.get(f"{self.base_url}/user/orgs")
         response.raise_for_status()
         return response.json()
 
@@ -35,7 +34,7 @@ class GitHubClient:
 
         while True:
             response = await self.client.get(
-                f"{self.BASE_URL}/orgs/{org}/repos",
+                f"{self.base_url}/orgs/{org}/repos",
                 params={"page": page, "per_page": per_page, "sort": "updated"}
             )
             response.raise_for_status()
@@ -60,7 +59,7 @@ class GitHubClient:
 
         while True:
             response = await self.client.get(
-                f"{self.BASE_URL}/user/repos",
+                f"{self.base_url}/user/repos",
                 params={"page": page, "per_page": per_page, "sort": "updated", "affiliation": "owner"}
             )
             response.raise_for_status()
@@ -81,7 +80,7 @@ class GitHubClient:
         """Get all workflows for a repository"""
         try:
             response = await self.client.get(
-                f"{self.BASE_URL}/repos/{owner}/{repo}/actions/workflows"
+                f"{self.base_url}/repos/{owner}/{repo}/actions/workflows"
             )
             response.raise_for_status()
             return response.json().get("workflows", [])
@@ -92,7 +91,7 @@ class GitHubClient:
         """Get recent workflow runs for a repository"""
         try:
             response = await self.client.get(
-                f"{self.BASE_URL}/repos/{owner}/{repo}/actions/runs",
+                f"{self.base_url}/repos/{owner}/{repo}/actions/runs",
                 params={"per_page": per_page, "status": "completed"}
             )
             response.raise_for_status()
@@ -104,7 +103,7 @@ class GitHubClient:
         """Get self-hosted runners for a repository"""
         try:
             response = await self.client.get(
-                f"{self.BASE_URL}/repos/{owner}/{repo}/actions/runners"
+                f"{self.base_url}/repos/{owner}/{repo}/actions/runners"
             )
             response.raise_for_status()
             return response.json().get("runners", [])
@@ -115,7 +114,7 @@ class GitHubClient:
         """Get branches for a repository"""
         try:
             response = await self.client.get(
-                f"{self.BASE_URL}/repos/{owner}/{repo}/branches",
+                f"{self.base_url}/repos/{owner}/{repo}/branches",
                 params={"per_page": 100}
             )
             response.raise_for_status()
@@ -127,7 +126,7 @@ class GitHubClient:
         """Get pull requests for a repository"""
         try:
             response = await self.client.get(
-                f"{self.BASE_URL}/repos/{owner}/{repo}/pulls",
+                f"{self.base_url}/repos/{owner}/{repo}/pulls",
                 params={"state": "all", "per_page": 50, "sort": "updated"}
             )
             response.raise_for_status()
@@ -139,7 +138,7 @@ class GitHubClient:
         """Get issues for a repository (excluding PRs)"""
         try:
             response = await self.client.get(
-                f"{self.BASE_URL}/repos/{owner}/{repo}/issues",
+                f"{self.base_url}/repos/{owner}/{repo}/issues",
                 params={"state": "all", "per_page": 50, "sort": "updated"}
             )
             response.raise_for_status()

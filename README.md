@@ -12,6 +12,7 @@ GitHub 조직 및 리포지토리의 개발 현황을 트리 형태로 한눈에
 - **실시간 모니터링**: GitHub Actions 워크플로우 실행 상태 및 러너 상태 확인
 - **API 사용량 추적**: GitHub API 토큰 사용량 및 제한 정보를 실시간으로 표시
 - **UI 기반 설정**: 브라우저에서 직접 GitHub 토큰 및 조직/리포지토리 설정 가능
+- **GitHub Enterprise 지원**: GitHub.com과 GitHub Enterprise 모두 지원
 - **로컬 스토리지 저장**: 설정이 브라우저에 안전하게 저장되어 재방문 시 자동 로드
 - **모던 UI/UX**: Material-UI 기반의 다크 테마 인터페이스
 - **자동 새로고침**: API 사용량 자동 업데이트 (30초마다)
@@ -76,12 +77,25 @@ docker-compose up -d
 # 3. 브라우저에서 http://localhost:5173 접속
 
 # 4. 설정 버튼(⚙️)을 클릭하여:
+#    - GitHub API Base URL 설정 (GitHub.com 또는 Enterprise)
 #    - GitHub Personal Access Token 입력
 #    - 모니터링할 조직/사용자 추가 (선택사항)
 #    - 저장 클릭
 ```
 
 설정은 브라우저의 로컬 스토리지에 안전하게 저장되며, 토큰은 GitHub API로만 전송됩니다.
+
+### GitHub Enterprise 사용
+
+GitHub Enterprise Server를 사용하는 경우:
+
+1. 설정 다이얼로그에서 **GitHub API Base URL**을 Enterprise 서버 URL로 변경:
+   - 형식: `https://github.company.com/api/v3`
+   - 예시: `https://github.example.com/api/v3`
+
+2. Enterprise에서 발급받은 Personal Access Token 입력
+
+3. 나머지 설정은 GitHub.com과 동일
 
 ### 설치 및 실행
 
@@ -179,6 +193,7 @@ VITE_API_BASE_URL=http://localhost:8000
 
 **Headers:**
 - `X-GitHub-Token` (optional): GitHub Personal Access Token
+- `X-GitHub-API-URL` (optional): GitHub API Base URL (기본값: `https://api.github.com`)
 
 **Query Parameters:**
 - `orgs` (optional): 콤마로 구분된 조직/사용자 목록 (예: `org1,org2,user1`)
@@ -201,6 +216,7 @@ GitHub API 사용량 정보를 반환합니다.
 
 **Headers:**
 - `X-GitHub-Token` (optional): GitHub Personal Access Token
+- `X-GitHub-API-URL` (optional): GitHub API Base URL (기본값: `https://api.github.com`)
 
 **Response:**
 ```json
@@ -331,6 +347,7 @@ MIT License
 
 - [x] UI 기반 설정 (GitHub 토큰 및 조직 관리)
 - [x] 로컬 스토리지 지원
+- [x] GitHub Enterprise 지원
 - [ ] 필터링 및 검색 기능
 - [ ] 즐겨찾기 리포지토리
 - [ ] 알림 기능 (워크플로우 실패 시)

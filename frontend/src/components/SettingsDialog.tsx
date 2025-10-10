@@ -19,9 +19,10 @@ import { Close, Add, Delete, Visibility, VisibilityOff } from '@mui/icons-materi
 interface SettingsDialogProps {
   open: boolean;
   onClose: () => void;
-  onSave: (token: string, orgs: string[]) => void;
+  onSave: (token: string, orgs: string[], githubApiUrl: string) => void;
   currentToken: string;
   currentOrgs: string[];
+  currentGithubApiUrl: string;
 }
 
 export const SettingsDialog: React.FC<SettingsDialogProps> = ({
@@ -30,16 +31,19 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   onSave,
   currentToken,
   currentOrgs,
+  currentGithubApiUrl,
 }) => {
   const [token, setToken] = useState(currentToken);
   const [orgs, setOrgs] = useState<string[]>(currentOrgs);
+  const [githubApiUrl, setGithubApiUrl] = useState(currentGithubApiUrl);
   const [newOrg, setNewOrg] = useState('');
   const [showToken, setShowToken] = useState(false);
 
   useEffect(() => {
     setToken(currentToken);
     setOrgs(currentOrgs);
-  }, [currentToken, currentOrgs, open]);
+    setGithubApiUrl(currentGithubApiUrl);
+  }, [currentToken, currentOrgs, currentGithubApiUrl, open]);
 
   const handleAddOrg = () => {
     if (newOrg.trim() && !orgs.includes(newOrg.trim())) {
@@ -53,7 +57,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   };
 
   const handleSave = () => {
-    onSave(token, orgs);
+    onSave(token, orgs, githubApiUrl);
     onClose();
   };
 
@@ -79,6 +83,23 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           <Alert severity="info" sx={{ mb: 2 }}>
             Settings are stored locally in your browser. Your token is never sent to any server except GitHub API.
           </Alert>
+
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>
+              GitHub API Base URL
+            </Typography>
+            <TextField
+              fullWidth
+              value={githubApiUrl}
+              onChange={(e) => setGithubApiUrl(e.target.value)}
+              placeholder="https://api.github.com"
+            />
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+              For GitHub.com use: <strong>https://api.github.com</strong>
+              <br />
+              For Enterprise use: <strong>https://github.company.com/api/v3</strong>
+            </Typography>
+          </Box>
 
           <Box>
             <Typography variant="subtitle2" gutterBottom>

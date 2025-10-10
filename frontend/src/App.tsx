@@ -58,6 +58,7 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [token, setToken] = useState('');
   const [orgs, setOrgs] = useState<string[]>([]);
+  const [githubApiUrl, setGithubApiUrl] = useState('https://api.github.com');
 
   const loadData = async () => {
     if (!token) {
@@ -72,8 +73,8 @@ function App() {
       setError(null);
 
       const [tree, rate] = await Promise.all([
-        fetchTree(orgs, token),
-        fetchRateLimit(token),
+        fetchTree(orgs, token, githubApiUrl),
+        fetchRateLimit(token, githubApiUrl),
       ]);
 
       setTreeData(tree);
@@ -86,10 +87,11 @@ function App() {
     }
   };
 
-  const handleSaveSettings = (newToken: string, newOrgs: string[]) => {
+  const handleSaveSettings = (newToken: string, newOrgs: string[], newGithubApiUrl: string) => {
     setToken(newToken);
     setOrgs(newOrgs);
-    saveSettings({ token: newToken, orgs: newOrgs });
+    setGithubApiUrl(newGithubApiUrl);
+    saveSettings({ token: newToken, orgs: newOrgs, githubApiUrl: newGithubApiUrl });
   };
 
   useEffect(() => {
@@ -98,6 +100,7 @@ function App() {
     if (settings) {
       setToken(settings.token);
       setOrgs(settings.orgs);
+      setGithubApiUrl(settings.githubApiUrl || 'https://api.github.com');
     } else {
       setLoading(false);
       setSettingsOpen(true);
@@ -111,13 +114,13 @@ function App() {
       // Refresh rate limit every 30 seconds
       const interval = setInterval(() => {
         if (token) {
-          fetchRateLimit(token).then(setRateLimit).catch(console.error);
+          fetchRateLimit(token, githubApiUrl).then(setRateLimit).catch(console.error);
         }
       }, 30000);
 
       return () => clearInterval(interval);
     }
-  }, [token, orgs]);
+  }, [token, orgs, githubApiUrl]);
 
   return (
     <ThemeProvider theme={darkTheme}>
@@ -232,6 +235,7 @@ function App() {
         onSave={handleSaveSettings}
         currentToken={token}
         currentOrgs={orgs}
+        currentGithubApiUrl={githubApiUrl}
       />
     </ThemeProvider>
   );
