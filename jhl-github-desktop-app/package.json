@@ -1,0 +1,42 @@
+{
+  "name": "jhl-github-desktop",
+  "private": true,
+  "version": "0.0.8",
+  "description": "JHL GitHub Desktop - GitHub Actions Runner Monitor",
+  "author": "JHL (declue)",
+  "type": "module",
+  "scripts": {
+    "dev": "npm-run-all --parallel vite pyloid",
+    "dev:watch": "npm-run-all --parallel vite pyloid:watch",
+    "vite": "vite",
+    "pyloid": "uv run -p .venv ./src-pyloid/main.py",
+    "pyloid:watch": "uv run pyloid-watcher --path ./src-pyloid --pattern \"*.py\" --command \"uv run ./src-pyloid/main.py\"",
+    "build": "tsc -b && vite build && uv run -p .venv ./src-pyloid/build/build.py",
+    "setup": "npm install && uv venv && uv sync"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "pyloid-js": "^0.3.3",
+    "@mui/material": "^6.2.0",
+    "@mui/icons-material": "^6.2.0",
+    "@emotion/react": "^11.13.5",
+    "@emotion/styled": "^11.13.5",
+    "axios": "^1.7.9"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.15.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.15.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-refresh": "^0.4.14",
+    "globals": "^15.12.0",
+    "typescript": "~5.6.2",
+    "typescript-eslint": "^8.15.0",
+    "vite": "^6.0.1",
+    "run-script-os": "^1.1.6",
+    "npm-run-all": "^4.1.5"
+  }
+}
