@@ -105,18 +105,25 @@ const flattenTree = (nodes: TreeNodeType[], parentPath = ''): FlatNode[] => {
   for (const node of nodes) {
     const path = parentPath ? `${parentPath} / ${node.name}` : node.name;
 
-    result.push({
-      id: node.id,
-      name: node.name,
-      type: node.type,
-      status: node.status,
-      url: node.url,
-      metadata: node.metadata,
-      path,
-      updated_at: node.metadata?.updated_at,
-      created_at: node.metadata?.created_at,
-    });
+    // Exclude organization and repository nodes from ListView
+    // Only show actual data items (workflows, runners, issues, etc.)
+    const isOrgOrRepo = node.type === 'organization' || node.type === 'repository';
 
+    if (!isOrgOrRepo) {
+      result.push({
+        id: node.id,
+        name: node.name,
+        type: node.type,
+        status: node.status,
+        url: node.url,
+        metadata: node.metadata,
+        path,
+        updated_at: node.metadata?.updated_at,
+        created_at: node.metadata?.created_at,
+      });
+    }
+
+    // Continue traversing children
     if (node.children && node.children.length > 0) {
       result.push(...flattenTree(node.children, path));
     }
