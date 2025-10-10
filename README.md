@@ -1,0 +1,340 @@
+# GitHub Repository Explorer
+
+GitHub 조직 및 리포지토리의 개발 현황을 트리 형태로 한눈에 파악할 수 있는 모니터링 웹 애플리케이션입니다.
+
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python](https://img.shields.io/badge/python-3.14-blue.svg)
+![React](https://img.shields.io/badge/react-19.1-blue.svg)
+
+## 주요 기능
+
+- **계층적 트리 뷰**: 조직, 리포지토리, 워크플로우, PR, 이슈 등을 트리 형태로 직관적으로 표시
+- **실시간 모니터링**: GitHub Actions 워크플로우 실행 상태 및 러너 상태 확인
+- **API 사용량 추적**: GitHub API 토큰 사용량 및 제한 정보를 실시간으로 표시
+- **UI 기반 설정**: 브라우저에서 직접 GitHub 토큰 및 조직/리포지토리 설정 가능
+- **로컬 스토리지 저장**: 설정이 브라우저에 안전하게 저장되어 재방문 시 자동 로드
+- **모던 UI/UX**: Material-UI 기반의 다크 테마 인터페이스
+- **자동 새로고침**: API 사용량 자동 업데이트 (30초마다)
+
+## 트리 구조
+
+```
+Organization/User
+├── Repository
+│   ├── Workflows (워크플로우 목록)
+│   │   └── Workflow (개별 워크플로우)
+│   ├── Recent Runs (최근 워크플로우 실행)
+│   │   └── Workflow Run (실행 결과 및 상태)
+│   ├── Runners (자체 호스팅 러너)
+│   │   └── Runner (러너 상태)
+│   ├── Branches (브랜치 목록)
+│   │   └── Branch (개별 브랜치)
+│   ├── Pull Requests (PR 목록)
+│   │   └── Pull Request (PR 상태 및 정보)
+│   └── Issues (이슈 목록)
+│       └── Issue (이슈 상태 및 정보)
+```
+
+## 기술 스택
+
+### Frontend
+- **Framework**: Vite + React 19.1 + TypeScript
+- **UI Library**: Material-UI (MUI) v6
+- **Icons**: Material Icons
+- **HTTP Client**: Axios
+- **Styling**: Emotion (CSS-in-JS)
+
+### Backend
+- **Framework**: FastAPI
+- **Language**: Python 3.14
+- **HTTP Client**: httpx
+- **Configuration**: pydantic-settings
+
+### Infrastructure
+- **Containerization**: Docker & Docker Compose
+- **Development Server**: Uvicorn (Backend), Vite (Frontend)
+
+## 시작하기
+
+### 사전 요구사항
+
+- Docker & Docker Compose (또는 Python 3.14+ & Node.js 20+)
+- GitHub Personal Access Token (필수 권한: `repo`, `workflow`, `read:org`)
+
+### 빠른 시작 (UI 설정 사용)
+
+가장 쉬운 방법은 UI를 통해 설정하는 것입니다:
+
+```bash
+# 1. 저장소 클론
+git clone <repository-url>
+cd github-actions-runner-monitor
+
+# 2. Docker Compose로 실행 (토큰 설정 없이 실행 가능)
+docker-compose up -d
+
+# 3. 브라우저에서 http://localhost:5173 접속
+
+# 4. 설정 버튼(⚙️)을 클릭하여:
+#    - GitHub Personal Access Token 입력
+#    - 모니터링할 조직/사용자 추가 (선택사항)
+#    - 저장 클릭
+```
+
+설정은 브라우저의 로컬 스토리지에 안전하게 저장되며, 토큰은 GitHub API로만 전송됩니다.
+
+### 설치 및 실행
+
+#### 1. Docker Compose 사용 (권장)
+
+**환경 변수 없이 실행 (UI에서 설정):**
+```bash
+# Docker Compose로 실행
+docker-compose up -d
+
+# 브라우저에서 http://localhost:5173 접속 후 설정
+```
+
+**또는 환경 변수로 설정:**
+```bash
+# 환경 변수 파일 생성
+cp backend/.env.example backend/.env
+# backend/.env 파일을 편집하여 GitHub 토큰 설정
+
+# Docker Compose로 실행
+docker-compose up -d
+
+# 브라우저에서 접속
+# Frontend: http://localhost:5173
+# Backend API: http://localhost:8000
+# API 문서: http://localhost:8000/docs
+```
+
+#### 2. 로컬 개발 환경
+
+**Backend 실행:**
+
+```bash
+cd backend
+
+# 가상 환경 생성 및 활성화
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# 의존성 설치
+pip install -r requirements.txt
+
+# 환경 변수 설정
+cp .env.example .env
+# .env 파일을 편집하여 GitHub 토큰 설정
+
+# 서버 실행
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**Frontend 실행:**
+
+```bash
+cd frontend
+
+# 의존성 설치
+npm install
+
+# 환경 변수 설정 (선택사항)
+cp .env.example .env
+
+# 개발 서버 실행
+npm run dev
+```
+
+### 환경 변수 설정
+
+**Backend (`backend/.env`):**
+
+```env
+GITHUB_TOKEN=your_github_personal_access_token_here
+GITHUB_ORG=your_organization_name  # 선택사항: 특정 조직만 표시
+```
+
+**Frontend (`frontend/.env`):**
+
+```env
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+## GitHub Personal Access Token 생성
+
+1. GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
+2. "Generate new token" 클릭
+3. 필요한 권한 선택:
+   - `repo` (전체 리포지토리 접근)
+   - `workflow` (GitHub Actions 워크플로우 접근)
+   - `read:org` (조직 정보 읽기)
+4. 생성된 토큰을 복사하여 `.env` 파일에 설정
+
+## API 엔드포인트
+
+### `GET /api/tree`
+전체 리포지토리 트리 구조를 반환합니다.
+
+**Headers:**
+- `X-GitHub-Token` (optional): GitHub Personal Access Token
+
+**Query Parameters:**
+- `orgs` (optional): 콤마로 구분된 조직/사용자 목록 (예: `org1,org2,user1`)
+
+**Response:**
+```json
+[
+  {
+    "id": "org-myorg",
+    "name": "myorg",
+    "type": "organization",
+    "children": [...],
+    "metadata": {"repo_count": 10}
+  }
+]
+```
+
+### `GET /api/rate-limit`
+GitHub API 사용량 정보를 반환합니다.
+
+**Headers:**
+- `X-GitHub-Token` (optional): GitHub Personal Access Token
+
+**Response:**
+```json
+{
+  "limit": 5000,
+  "remaining": 4950,
+  "reset": 1234567890,
+  "used": 50
+}
+```
+
+> **Note**: 헤더로 토큰을 전달하지 않으면 환경 변수의 토큰을 사용합니다. UI에서 설정한 토큰은 자동으로 헤더에 포함됩니다.
+
+## 프로젝트 구조
+
+```
+github-actions-runner-monitor/
+├── backend/
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── main.py              # FastAPI 애플리케이션
+│   │   ├── config.py            # 설정 관리
+│   │   ├── github_client.py     # GitHub API 클라이언트
+│   │   └── models.py            # Pydantic 모델
+│   ├── requirements.txt
+│   ├── Dockerfile
+│   └── .env.example
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── TreeView.tsx          # 트리 뷰 컴포넌트
+│   │   │   ├── RateLimitDisplay.tsx  # API 사용량 표시
+│   │   │   └── SettingsDialog.tsx    # 설정 다이얼로그
+│   │   ├── utils/
+│   │   │   └── storage.ts            # 로컬 스토리지 관리
+│   │   ├── types.ts                  # TypeScript 타입 정의
+│   │   ├── api.ts                    # API 클라이언트
+│   │   └── App.tsx                   # 메인 앱 컴포넌트
+│   ├── package.json
+│   ├── Dockerfile
+│   └── .env.example
+├── docker-compose.yml
+├── .gitignore
+└── README.md
+```
+
+## 주요 컴포넌트 설명
+
+### Backend
+
+- **github_client.py**: GitHub REST API와 통신하는 비동기 클라이언트
+- **main.py**: FastAPI 라우트 및 비즈니스 로직
+- **models.py**: 데이터 모델 정의 (TreeNode, RateLimitInfo)
+
+### Frontend
+
+- **TreeView.tsx**: 재귀적 트리 구조를 렌더링하는 컴포넌트
+  - 노드 타입별 아이콘 표시
+  - 상태별 색상 구분 (success, failure, pending 등)
+  - 확장/축소 기능
+  - GitHub 링크 연결
+
+- **RateLimitDisplay.tsx**: API 사용량을 시각화하는 컴포넌트
+  - 프로그레스 바
+  - 남은 API 호출 횟수
+  - 리셋 시간 표시
+
+- **SettingsDialog.tsx**: 설정 관리 다이얼로그
+  - GitHub 토큰 입력 및 저장
+  - 조직/사용자 추가/삭제
+  - 로컬 스토리지 연동
+
+## 개발 가이드
+
+### 코드 스타일
+
+**Python:**
+- PEP 8 준수
+- Type hints 사용
+
+**TypeScript:**
+- ESLint 설정 준수
+- Functional components + Hooks 사용
+
+### 빌드
+
+```bash
+# Frontend 빌드
+cd frontend
+npm run build
+
+# 빌드된 파일은 frontend/dist/ 에 생성됩니다
+```
+
+## 트러블슈팅
+
+### API 토큰 오류
+- UI의 설정 다이얼로그(⚙️)에서 올바른 GitHub 토큰이 입력되었는지 확인
+- 토큰에 필요한 권한이 부여되었는지 확인 (`repo`, `workflow`, `read:org`)
+- 환경 변수를 사용하는 경우 `.env` 파일 확인
+
+### 토큰이 저장되지 않는 경우
+- 브라우저의 로컬 스토리지가 활성화되어 있는지 확인
+- 시크릿 모드에서는 로컬 스토리지가 제한될 수 있음
+- 브라우저 개발자 도구 → Application → Local Storage 확인
+
+### CORS 오류
+- Backend의 CORS 설정이 Frontend URL을 포함하는지 확인
+- `backend/app/main.py`의 `allow_origins` 확인
+
+### API Rate Limit 초과
+- GitHub API는 시간당 5,000회 호출 제한이 있습니다
+- Rate limit 정보를 확인하고 필요시 대기
+
+## 라이선스
+
+MIT License
+
+## 기여
+
+이슈 및 풀 리퀘스트를 환영합니다!
+
+## 스크린샷
+
+(실행 후 스크린샷을 추가하세요)
+
+## 개선 예정 사항
+
+- [x] UI 기반 설정 (GitHub 토큰 및 조직 관리)
+- [x] 로컬 스토리지 지원
+- [ ] 필터링 및 검색 기능
+- [ ] 즐겨찾기 리포지토리
+- [ ] 알림 기능 (워크플로우 실패 시)
+- [ ] 다국어 지원
+- [ ] 라이트 테마 지원
+- [ ] 리포지토리별 상세 통계
+- [ ] Export 기능 (JSON, CSV)
