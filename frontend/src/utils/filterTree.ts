@@ -20,8 +20,10 @@ export const filterTreeNodes = (
   const filtered: TreeNode[] = [];
 
   for (const node of nodes) {
-    // Skip disabled nodes - they shouldn't be searched or displayed
-    if (node.enabled === false) {
+    // For organizations, always show them (even if unchecked) so users can see and select repos
+    // For other nodes (repos, workflows, etc.), skip if disabled
+    const isOrganization = node.type === 'organization';
+    if (!isOrganization && node.enabled === false) {
       continue;
     }
 
