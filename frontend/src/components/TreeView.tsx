@@ -16,7 +16,7 @@ import {
   Settings,
   PlayArrow,
   Speed,
-  GitBranch,
+  CallSplit,
   PullRequest,
   BugReport,
   CheckCircle,
@@ -50,7 +50,7 @@ const getNodeIcon = (type: string, expanded: boolean) => {
       return <Speed {...iconProps} />;
     case 'branches':
     case 'branch':
-      return <GitBranch {...iconProps} />;
+      return <CallSplit {...iconProps} />;
     case 'pull_requests':
     case 'pull_request':
       return <PullRequest {...iconProps} />;
