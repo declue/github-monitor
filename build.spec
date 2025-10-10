@@ -38,6 +38,18 @@ datas = [
 # Add any additional data files from dependencies
 datas += collect_data_files('pyloid')
 
+# Determine icon file based on platform
+icon_file = None
+if sys.platform == 'win32':
+    # Windows needs .ico file - will be created if available
+    if os.path.exists('assets/icon.ico'):
+        icon_file = 'assets/icon.ico'
+elif sys.platform == 'darwin':
+    # macOS needs .icns file - will be created if available
+    if os.path.exists('assets/icon.icns'):
+        icon_file = 'assets/icon.icns'
+# Linux doesn't need icon file for PyInstaller
+
 a = Analysis(
     ['pyloid_main.py'],
     pathex=[],
@@ -72,7 +84,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='assets/icon.svg',  # Icon file
+    icon=icon_file,  # Platform-specific icon or None
 )
 
 coll = COLLECT(
@@ -88,16 +100,19 @@ coll = COLLECT(
 
 # For macOS app bundle
 if sys.platform == 'darwin':
+    # Use .icns icon if available, otherwise None
+    bundle_icon = 'assets/icon.icns' if os.path.exists('assets/icon.icns') else None
+
     app = BUNDLE(
         coll,
         name='JHL GitHub Desktop.app',
-        icon='assets/icon.svg',
+        icon=bundle_icon,
         bundle_identifier='com.jhl.github.desktop',
         info_plist={
             'NSHighResolutionCapable': 'True',
             'LSBackgroundOnly': 'False',
-            'CFBundleShortVersionString': '0.0.1',
-            'CFBundleVersion': '0.0.1',
+            'CFBundleShortVersionString': '0.0.3',
+            'CFBundleVersion': '0.0.3',
             'NSHumanReadableCopyright': 'Copyright © 2025 JHL (declue). All rights reserved.',
         },
     )
