@@ -27,29 +27,55 @@ class GitHubClient:
         return response.json()
 
     async def get_org_repos(self, org: str) -> List[Dict[str, Any]]:
-        """Get all repositories for an organization"""
+        """Get all repositories for an organization or user"""
         repos = []
         page = 1
         per_page = 100
 
-        while True:
-            response = await self.client.get(
-                f"{self.base_url}/orgs/{org}/repos",
-                params={"page": page, "per_page": per_page, "sort": "updated"}
-            )
-            response.raise_for_status()
-            data = response.json()
+        # Try organization endpoint first
+        try:
+            while True:
+                response = await self.client.get(
+                    f"{self.base_url}/orgs/{org}/repos",
+                    params={"page": page, "per_page": per_page, "sort": "updated"}
+                )
+                response.raise_for_status()
+                data = response.json()
 
-            if not data:
-                break
+                if not data:
+                    break
 
-            repos.extend(data)
-            page += 1
+                repos.extend(data)
+                page += 1
 
-            if len(data) < per_page:
-                break
+                if len(data) < per_page:
+                    break
 
-        return repos
+            return repos
+        except httpx.HTTPStatusError as e:
+            # If org endpoint fails (404), try user endpoint
+            if e.response.status_code == 404:
+                page = 1
+                while True:
+                    response = await self.client.get(
+                        f"{self.base_url}/users/{org}/repos",
+                        params={"page": page, "per_page": per_page, "sort": "updated"}
+                    )
+                    response.raise_for_status()
+                    data = response.json()
+
+                    if not data:
+                        break
+
+                    repos.extend(data)
+                    page += 1
+
+                    if len(data) < per_page:
+                        break
+
+                return repos
+            else:
+                raise
 
     async def get_user_repos(self) -> List[Dict[str, Any]]:
         """Get all repositories for the authenticated user"""
