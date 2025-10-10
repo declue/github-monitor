@@ -1,7 +1,10 @@
 from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from typing import List, Optional
 from datetime import datetime
+from pathlib import Path
 from app.github_client import GitHubClient
 from app.models import TreeNode, RateLimitInfo
 from app.config import settings
@@ -16,11 +19,28 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"],
+    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:3000", "http://127.0.0.1:8000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Determine frontend path (for PyInstaller bundled app)
+import sys
+import os
+
+if getattr(sys, 'frozen', False):
+    # Running in PyInstaller bundle
+    base_path = Path(sys._MEIPASS)
+else:
+    # Running in development
+    base_path = Path(__file__).parent.parent.parent
+
+frontend_path = base_path / "frontend" / "dist"
+
+# Mount static files if frontend exists
+if frontend_path.exists():
+    app.mount("/assets", StaticFiles(directory=str(frontend_path / "assets")), name="assets")
 
 # Default client (uses env token if available)
 default_github_client = GitHubClient() if settings.github_token else None
@@ -529,14 +549,19 @@ async def get_repo_details(
 
 @app.get("/")
 async def root():
-    """Root endpoint with basic API information"""
-    return {
-        "name": __app_name__,
-        "version": __version__,
-        "description": __description__,
-        "status": "running",
-        "docs_url": "/docs",
-    }
+    """Serve the frontend index.html or API information"""
+    index_file = frontend_path / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
+    else:
+        # Fallback to API information if frontend not available
+        return {
+            "name": __app_name__,
+            "version": __version__,
+            "description": __description__,
+            "status": "running",
+            "docs_url": "/docs",
+        }
 
 
 @app.get("/health")

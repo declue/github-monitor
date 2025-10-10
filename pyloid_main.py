@@ -5,10 +5,12 @@ Pyloid Desktop Application
 Author: JHL (declue)
 Repository: https://github.com/declue/github-monitor
 """
-from pyloid import Pyloid, PyloidAPI, Bridge
+from pyloid import Pyloid
 import sys
 import os
-import asyncio
+import time
+import socket
+from contextlib import contextmanager
 import uvicorn
 from threading import Thread
 
@@ -19,18 +21,36 @@ if backend_path not in sys.path:
 
 from app.main import app as fastapi_app
 
-class AppAPI(PyloidAPI):
-    """Custom API for the application"""
-
-    @Bridge(str, result=str)
-    def get_app_version(self):
-        """Get application version"""
-        from app.version import __version__
-        return __version__
+# Backend server configuration
+HOST = "127.0.0.1"
+PORT = 8000
 
 def run_backend():
     """Run FastAPI backend in a separate thread"""
-    uvicorn.run(fastapi_app, host="127.0.0.1", port=8000, log_level="info")
+    uvicorn.run(
+        fastapi_app,
+        host=HOST,
+        port=PORT,
+        log_level="info",
+        access_log=False  # Reduce console noise
+    )
+
+@contextmanager
+def wait_for_server(host=HOST, port=PORT, timeout=30):
+    """Wait for the backend server to start"""
+    start_time = time.time()
+    while True:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                if sock.connect_ex((host, port)) == 0:
+                    break
+        except:
+            pass
+
+        if time.time() - start_time > timeout:
+            raise TimeoutError(f"Backend server at {host}:{port} did not start within {timeout} seconds")
+        time.sleep(0.1)
+    yield
 
 def main():
     # Start backend server in a separate thread
@@ -38,28 +58,21 @@ def main():
     backend_thread.start()
 
     # Create Pyloid app
-    app = Pyloid(app_name="JHL GitHub Desktop")
+    app = Pyloid(app_name="JHL GitHub Desktop", single_instance=True)
 
-    # Set window properties
+    # Create window
     window = app.create_window(
         title="JHL GitHub Desktop - GitHub Actions Runner Monitor",
-        width=1400,
-        height=900,
-        dev_tools=False
     )
 
-    # Load the frontend
-    # In production, load from bundled frontend files
-    frontend_path = os.path.join(os.path.dirname(__file__), "frontend", "dist", "index.html")
+    # Set window size
+    window.set_size(1400, 900)
 
-    if os.path.exists(frontend_path):
-        window.load_file(frontend_path)
-    else:
-        # Fallback to development server
-        window.load_url("http://localhost:5173")
-
-    # Register custom API
-    window.set_api(AppAPI())
+    # Wait for backend to be ready, then load the app
+    with wait_for_server():
+        # Load the backend URL
+        window.load_url(f"http://{HOST}:{PORT}")
+        window.show_and_focus()
 
     # Run the app
     app.run()
