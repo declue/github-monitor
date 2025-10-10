@@ -119,7 +119,13 @@ function App() {
 
     if (needsDeepSearch) {
       // Only expand enabled repositories to avoid unnecessary API calls
+      // This will fetch all data first, then update state once at the end
       const expandedData = await expandAllRepositories(treeData, true); // Pass true to only expand enabled
+
+      // Update treeData with all loaded children
+      setTreeData(expandedData);
+
+      // Then apply filters
       const filtered = filterTreeNodes(expandedData, newFilters);
       setFilteredTreeData(filtered);
     } else {
@@ -171,6 +177,7 @@ function App() {
     repoDetailsCache.current.clear();
   };
 
+  // Load children for a single node (used by TreeView expansion)
   const handleLoadChildren = useCallback(async (node: TreeNode): Promise<TreeNode[]> => {
     // Only handle repository nodes for lazy loading
     if (node.type !== 'repository') {
@@ -221,6 +228,38 @@ function App() {
     }
   }, [token, githubApiUrl, treeData]);
 
+  // Load children without updating state (used for batch loading during filter)
+  const loadChildrenForNode = useCallback(async (node: TreeNode): Promise<TreeNode[]> => {
+    if (node.type !== 'repository') {
+      return node.children || [];
+    }
+
+    const owner = node.metadata?.owner;
+    const repo = node.name;
+
+    if (!owner || !repo) {
+      console.error('Missing owner or repo name for node:', node);
+      return [];
+    }
+
+    const cacheKey = `${owner}/${repo}`;
+
+    // Check cache first
+    if (repoDetailsCache.current.has(cacheKey)) {
+      return repoDetailsCache.current.get(cacheKey)!;
+    }
+
+    try {
+      const children = await fetchRepoDetails(owner, repo, token, githubApiUrl);
+      // Cache the result
+      repoDetailsCache.current.set(cacheKey, children);
+      return children;
+    } catch (error) {
+      console.error(`Failed to load details for ${owner}/${repo}:`, error);
+      return [];
+    }
+  }, [token, githubApiUrl]);
+
   const expandAllRepositories = useCallback(async (nodes: TreeNode[], onlyEnabled: boolean = false): Promise<TreeNode[]> => {
     const expandedNodes: TreeNode[] = [];
 
@@ -234,7 +273,7 @@ function App() {
       if (node.type === 'repository' && !node.isLoaded && node.hasChildren) {
         // Load repository details only if enabled (or if we're not filtering by enabled status)
         if (!onlyEnabled || node.enabled !== false) {
-          const children = await handleLoadChildren(node);
+          const children = await loadChildrenForNode(node);
           expandedNodes.push({
             ...node,
             children,
@@ -256,7 +295,7 @@ function App() {
     }
 
     return expandedNodes;
-  }, [handleLoadChildren]);
+  }, [loadChildrenForNode]);
 
   useEffect(() => {
     // Load settings from localStorage
