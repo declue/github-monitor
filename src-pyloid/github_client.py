@@ -6,7 +6,7 @@ from config import settings
 class GitHubClient:
     def __init__(self, token: Optional[str] = None, api_url: Optional[str] = None):
         self.token = token or settings.github_token
-        self.base_url = api_url or "https://api.github.com"
+        self.base_url = api_url or settings.github_api_url or "https://api.github.com"
         self.headers = {
             "Authorization": f"Bearer {self.token}",
             "Accept": "application/vnd.github+json",

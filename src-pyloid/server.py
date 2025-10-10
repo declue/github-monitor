@@ -2,13 +2,14 @@ from pyloid_adapter.base_adapter import BaseAdapter
 from pyloid_adapter.context import PyloidContext
 from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 # GitHub API imports
 from github_client import GitHubClient
 from models import TreeNode, RateLimitInfo
 from config import settings
+from config_manager import get_config_manager, AppConfig, WatchedRepo
 from version import __version__, __app_name__, __description__
 
 app = FastAPI(
@@ -416,3 +417,135 @@ async def create_window(request: Request):
     win = ctx.pyloid.create_window(title='GitHub Repository')
     win.load_url('https://www.github.com')
     win.show_and_focus()
+
+
+# Configuration Management Endpoints
+
+@app.get("/api/config", response_model=AppConfig)
+async def get_configuration():
+    """Get current application configuration"""
+    config_manager = get_config_manager()
+    return config_manager.get_config()
+
+
+@app.post("/api/config/github")
+async def update_github_config(
+    token: Optional[str] = None,
+    api_url: Optional[str] = None,
+    organization: Optional[str] = None
+):
+    """Update GitHub configuration"""
+    config_manager = get_config_manager()
+
+    if token is not None:
+        config_manager.update_github_token(token)
+    if api_url is not None:
+        config_manager.update_github_api_url(api_url)
+    if organization is not None:
+        config_manager.update_github_organization(organization)
+
+    # Reload settings to apply changes
+    from config import load_settings
+    global settings
+    settings = load_settings()
+
+    return {"status": "updated", "config": config_manager.get_config().github}
+
+
+@app.get("/api/config/watched-repos", response_model=List[WatchedRepo])
+async def get_watched_repos():
+    """Get list of watched repositories"""
+    config_manager = get_config_manager()
+    return config_manager.get_watched_repos()
+
+
+@app.post("/api/config/watched-repos")
+async def add_watched_repo(owner: str, repo: str, notifications: bool = True):
+    """Add a repository to watch list"""
+    config_manager = get_config_manager()
+    config_manager.add_watched_repo(owner, repo, notifications)
+    return {"status": "added", "repo": f"{owner}/{repo}"}
+
+
+@app.delete("/api/config/watched-repos/{owner}/{repo}")
+async def remove_watched_repo(owner: str, repo: str):
+    """Remove a repository from watch list"""
+    config_manager = get_config_manager()
+    config_manager.remove_watched_repo(owner, repo)
+    return {"status": "removed", "repo": f"{owner}/{repo}"}
+
+
+@app.post("/api/config/ui")
+async def update_ui_config(
+    theme: Optional[str] = None,
+    language: Optional[str] = None,
+    window_size: Optional[Dict[str, int]] = None,
+    window_position: Optional[Dict[str, int]] = None
+):
+    """Update UI configuration"""
+    config_manager = get_config_manager()
+    config = config_manager.get_config()
+
+    if theme is not None:
+        config.ui.theme = theme
+    if language is not None:
+        config.ui.language = language
+    if window_size is not None:
+        config.ui.window_size = window_size
+    if window_position is not None:
+        config.ui.window_position = window_position
+
+    config_manager.save_config()
+    return {"status": "updated", "config": config.ui}
+
+
+@app.post("/api/config/reset")
+async def reset_configuration():
+    """Reset configuration to defaults"""
+    config_manager = get_config_manager()
+    config_manager.reset_config()
+
+    # Reload settings
+    from config import load_settings
+    global settings
+    settings = load_settings()
+
+    return {"status": "reset", "message": "Configuration reset to defaults"}
+
+
+@app.post("/api/config/export")
+async def export_configuration(export_path: str):
+    """Export configuration to a file"""
+    try:
+        config_manager = get_config_manager()
+        config_manager.export_config(export_path)
+        return {"status": "exported", "path": export_path}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/config/import")
+async def import_configuration(import_path: str):
+    """Import configuration from a file"""
+    try:
+        config_manager = get_config_manager()
+        config_manager.import_config(import_path)
+
+        # Reload settings
+        from config import load_settings
+        global settings
+        settings = load_settings()
+
+        return {"status": "imported", "path": import_path}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/config/path")
+async def get_config_path():
+    """Get the configuration file path"""
+    config_manager = get_config_manager()
+    return {
+        "config_file": str(config_manager.config_file_path),
+        "config_directory": str(config_manager.config_directory)
+    }
