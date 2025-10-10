@@ -102,14 +102,26 @@ const formatTimestamp = (timestamp?: string): string => {
 const flattenTree = (nodes: TreeNodeType[], parentPath = ''): FlatNode[] => {
   const result: FlatNode[] = [];
 
+  // Container types that should be excluded from ListView
+  const containerTypes = [
+    'organization',
+    'repository',
+    'workflows',
+    'workflow_runs',
+    'runners',
+    'branches',
+    'pull_requests',
+    'issues',
+  ];
+
   for (const node of nodes) {
     const path = parentPath ? `${parentPath} / ${node.name}` : node.name;
 
-    // Exclude organization and repository nodes from ListView
-    // Only show actual data items (workflows, runners, issues, etc.)
-    const isOrgOrRepo = node.type === 'organization' || node.type === 'repository';
+    // Only show actual individual items (workflow, runner, issue, etc.)
+    // Exclude organizations, repositories, and container nodes
+    const shouldExclude = containerTypes.includes(node.type);
 
-    if (!isOrgOrRepo) {
+    if (!shouldExclude) {
       result.push({
         id: node.id,
         name: node.name,
