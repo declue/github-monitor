@@ -14,9 +14,13 @@ import {
   TablePagination,
   TextField,
   InputAdornment,
+  TableSortLabel,
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import type { TreeNode as TreeNodeType } from '../types';
+
+type Order = 'asc' | 'desc';
+type OrderBy = 'path' | 'name' | 'type' | 'status';
 
 interface ListViewProps {
   data: TreeNodeType[];
@@ -86,6 +90,8 @@ export const ListView: React.FC<ListViewProps> = ({ data, filteredData }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [searchText, setSearchText] = useState('');
+  const [order, setOrder] = useState<Order>('asc');
+  const [orderBy, setOrderBy] = useState<OrderBy>('path');
 
   useEffect(() => {
     const dataToFlatten = filteredData || data;
@@ -108,6 +114,33 @@ export const ListView: React.FC<ListViewProps> = ({ data, filteredData }) => {
     setPage(0);
   };
 
+  const handleRequestSort = (property: OrderBy) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+    setPage(0);
+  };
+
+  const compareValues = (a: any, b: any, orderBy: OrderBy): number => {
+    const aValue = a[orderBy] || '';
+    const bValue = b[orderBy] || '';
+
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      return aValue.localeCompare(bValue);
+    }
+
+    if (aValue < bValue) return -1;
+    if (aValue > bValue) return 1;
+    return 0;
+  };
+
+  const sortData = (data: FlatNode[], order: Order, orderBy: OrderBy): FlatNode[] => {
+    return [...data].sort((a, b) => {
+      const comparison = compareValues(a, b, orderBy);
+      return order === 'asc' ? comparison : -comparison;
+    });
+  };
+
   // Filter by local search text (in addition to any external filtering)
   const localFilteredData = searchText
     ? flatData.filter(
@@ -122,7 +155,11 @@ export const ListView: React.FC<ListViewProps> = ({ data, filteredData }) => {
       )
     : flatData;
 
-  const paginatedData = localFilteredData.slice(
+  // Sort data
+  const sortedData = sortData(localFilteredData, order, orderBy);
+
+  // Paginate sorted data
+  const paginatedData = sortedData.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
@@ -153,10 +190,42 @@ export const ListView: React.FC<ListViewProps> = ({ data, filteredData }) => {
         <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Path</TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Status</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'path'}
+                  direction={orderBy === 'path' ? order : 'asc'}
+                  onClick={() => handleRequestSort('path')}
+                >
+                  Path
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'name'}
+                  direction={orderBy === 'name' ? order : 'asc'}
+                  onClick={() => handleRequestSort('name')}
+                >
+                  Name
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'type'}
+                  direction={orderBy === 'type' ? order : 'asc'}
+                  onClick={() => handleRequestSort('type')}
+                >
+                  Type
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'status'}
+                  direction={orderBy === 'status' ? order : 'asc'}
+                  onClick={() => handleRequestSort('status')}
+                >
+                  Status
+                </TableSortLabel>
+              </TableCell>
               <TableCell>Metadata</TableCell>
               <TableCell>Link</TableCell>
             </TableRow>
@@ -232,7 +301,7 @@ export const ListView: React.FC<ListViewProps> = ({ data, filteredData }) => {
       <TablePagination
         rowsPerPageOptions={[10, 25, 50, 100]}
         component="div"
-        count={localFilteredData.length}
+        count={sortedData.length}
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}
