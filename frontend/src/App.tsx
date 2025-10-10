@@ -24,7 +24,7 @@ import { ListView } from './components/ListView';
 import { fetchTree, fetchRateLimit, fetchRepoDetails } from './api';
 import type { TreeNode, RateLimitInfo } from './types';
 import { loadSettings, saveSettings } from './utils/storage';
-import { filterTreeNodes, countTreeNodes } from './utils/filterTree';
+import { filterTreeNodes, countTreeNodes, filterEnabledNodes } from './utils/filterTree';
 import { getVersionInfo, ENVIRONMENT } from './config/version';
 
 const darkTheme = createTheme({
@@ -392,7 +392,7 @@ function App() {
 
                 {/* Right side: List View */}
                 <Box sx={{ flex: '1 1 60%' }}>
-                  <ListView data={treeData} filteredData={filteredTreeData} />
+                  <ListView data={treeData} filteredData={filterEnabledNodes(filteredTreeData)} />
                 </Box>
               </Box>
             </>

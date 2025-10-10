@@ -3,6 +3,7 @@ import type { SearchFilterState } from '../components/SearchFilter';
 
 /**
  * Recursively filter tree nodes based on search criteria
+ * Only searches within enabled nodes
  */
 export const filterTreeNodes = (
   nodes: TreeNode[],
@@ -19,6 +20,11 @@ export const filterTreeNodes = (
   const filtered: TreeNode[] = [];
 
   for (const node of nodes) {
+    // Skip disabled nodes - they shouldn't be searched or displayed
+    if (node.enabled === false) {
+      continue;
+    }
+
     // Check if this node matches the filters
     const matchesSearch = searchText
       ? matchesSearchText(node, searchText.toLowerCase())
@@ -32,6 +38,7 @@ export const filterTreeNodes = (
 
     // If parent matched, include all children without filtering
     // This is natural tree search behavior - when parent matches, show all descendants
+    // But still respect the enabled status
     if (parentMatched) {
       filtered.push({
         ...node,
@@ -40,20 +47,44 @@ export const filterTreeNodes = (
       continue;
     }
 
-    // Filter children recursively
-    // Pass down whether current node matches so children know to include everything
-    const filteredChildren = node.children
-      ? filterTreeNodes(node.children, filters, currentNodeMatches)
-      : [];
+    const isRepository = node.type === 'repository';
 
-    // Include this node if:
-    // 1. It matches the filters itself, OR
-    // 2. Any of its children match (to show the path to matching children)
-    if (currentNodeMatches || filteredChildren.length > 0) {
-      filtered.push({
-        ...node,
-        children: filteredChildren,
-      });
+    // For repositories: if checked, show them even if no search match
+    // For organizations: always show if they have enabled repos
+    if (isRepository) {
+      // If repo matches search OR it's just enabled and we want to show it
+      if (currentNodeMatches) {
+        // Repo matches - show all its children
+        filtered.push({
+          ...node,
+          children: node.children || [],
+        });
+      } else if (searchText || selectedTypes.length > 0) {
+        // There's a search but repo doesn't match - don't show it
+        continue;
+      } else {
+        // No search filter - show enabled repo with its children
+        filtered.push({
+          ...node,
+          children: node.children || [],
+        });
+      }
+    } else {
+      // For other nodes (org, workflows, runners, etc.)
+      // Filter children recursively
+      const filteredChildren = node.children
+        ? filterTreeNodes(node.children, filters, currentNodeMatches)
+        : [];
+
+      // Include this node if:
+      // 1. It matches the filters itself, OR
+      // 2. Any of its children match (to show the path to matching children)
+      if (currentNodeMatches || filteredChildren.length > 0) {
+        filtered.push({
+          ...node,
+          children: filteredChildren,
+        });
+      }
     }
   }
 
@@ -88,6 +119,35 @@ const matchesSearchText = (node: TreeNode, searchText: string): boolean => {
   }
 
   return false;
+};
+
+/**
+ * Filter tree to only include enabled nodes
+ * If a repo is disabled, exclude it and all its children
+ * If an org is disabled, exclude it entirely
+ */
+export const filterEnabledNodes = (nodes: TreeNode[]): TreeNode[] => {
+  const filtered: TreeNode[] = [];
+
+  for (const node of nodes) {
+    // Skip disabled nodes (org or repo level)
+    if (node.enabled === false) {
+      continue;
+    }
+
+    // If node is enabled, include it with its enabled children
+    if (node.children && node.children.length > 0) {
+      const enabledChildren = filterEnabledNodes(node.children);
+      filtered.push({
+        ...node,
+        children: enabledChildren,
+      });
+    } else {
+      filtered.push(node);
+    }
+  }
+
+  return filtered;
 };
 
 /**
