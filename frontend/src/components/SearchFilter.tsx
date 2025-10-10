@@ -11,6 +11,7 @@ import {
   Paper,
   IconButton,
   Tooltip,
+  CircularProgress,
 } from '@mui/material';
 import { Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
 import type { SelectChangeEvent } from '@mui/material';
@@ -21,7 +22,7 @@ export interface SearchFilterState {
 }
 
 interface SearchFilterProps {
-  onFilterChange: (filters: SearchFilterState) => void;
+  onFilterChange: (filters: SearchFilterState) => Promise<void>;
 }
 
 const NODE_TYPES = [
@@ -36,23 +37,39 @@ const NODE_TYPES = [
 export const SearchFilter: React.FC<SearchFilterProps> = ({ onFilterChange }) => {
   const [searchText, setSearchText] = useState('');
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSearchChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setSearchText(value);
-    onFilterChange({ searchText: value, selectedTypes });
+    setLoading(true);
+    try {
+      await onFilterChange({ searchText: value, selectedTypes });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleTypeChange = (event: SelectChangeEvent<string[]>) => {
+  const handleTypeChange = async (event: SelectChangeEvent<string[]>) => {
     const value = event.target.value as string[];
     setSelectedTypes(value);
-    onFilterChange({ searchText, selectedTypes: value });
+    setLoading(true);
+    try {
+      await onFilterChange({ searchText, selectedTypes: value });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleClear = () => {
+  const handleClear = async () => {
     setSearchText('');
     setSelectedTypes([]);
-    onFilterChange({ searchText: '', selectedTypes: [] });
+    setLoading(true);
+    try {
+      await onFilterChange({ searchText: '', selectedTypes: [] });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -66,13 +83,14 @@ export const SearchFilter: React.FC<SearchFilterProps> = ({ onFilterChange }) =>
           onChange={handleSearchChange}
           variant="outlined"
           size="small"
+          disabled={loading}
           InputProps={{
             startAdornment: <SearchIcon sx={{ mr: 1, color: 'action.active' }} />,
           }}
           sx={{ flex: 2 }}
         />
 
-        <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
+        <FormControl size="small" sx={{ flex: 1, minWidth: 200 }} disabled={loading}>
           <InputLabel>Filter by Type</InputLabel>
           <Select
             multiple
@@ -96,15 +114,19 @@ export const SearchFilter: React.FC<SearchFilterProps> = ({ onFilterChange }) =>
           </Select>
         </FormControl>
 
-        <Tooltip title="Clear filters">
-          <IconButton
-            onClick={handleClear}
-            disabled={!searchText && selectedTypes.length === 0}
-            color="primary"
-          >
-            <ClearIcon />
-          </IconButton>
-        </Tooltip>
+        {loading ? (
+          <CircularProgress size={24} />
+        ) : (
+          <Tooltip title="Clear filters">
+            <IconButton
+              onClick={handleClear}
+              disabled={!searchText && selectedTypes.length === 0}
+              color="primary"
+            >
+              <ClearIcon />
+            </IconButton>
+          </Tooltip>
+        )}
       </Box>
     </Paper>
   );

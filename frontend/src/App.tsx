@@ -95,9 +95,21 @@ function App() {
     }
   };
 
-  const handleFilterChange = useCallback((newFilters: SearchFilterState) => {
-    const filtered = filterTreeNodes(treeData, newFilters);
-    setFilteredTreeData(filtered);
+  const handleFilterChange = useCallback(async (newFilters: SearchFilterState) => {
+    const { searchText, selectedTypes } = newFilters;
+
+    // If filters are applied and we need to search in lazy-loaded children (like runners, workflows, etc.)
+    const needsDeepSearch = selectedTypes.length > 0 || searchText.trim().length > 0;
+
+    if (needsDeepSearch) {
+      // Auto-expand all repositories to load their children for filtering
+      const expandedData = await expandAllRepositories(treeData);
+      const filtered = filterTreeNodes(expandedData, newFilters);
+      setFilteredTreeData(filtered);
+    } else {
+      // No filters, just show original data
+      setFilteredTreeData(treeData);
+    }
   }, [treeData]);
 
   const handleSaveSettings = (newToken: string, newOrgs: string[], newGithubApiUrl: string) => {
@@ -140,6 +152,33 @@ function App() {
       return [];
     }
   }, [token, githubApiUrl]);
+
+  const expandAllRepositories = useCallback(async (nodes: TreeNode[]): Promise<TreeNode[]> => {
+    const expandedNodes: TreeNode[] = [];
+
+    for (const node of nodes) {
+      if (node.type === 'repository' && !node.isLoaded && node.hasChildren) {
+        // Load repository details
+        const children = await handleLoadChildren(node);
+        expandedNodes.push({
+          ...node,
+          children,
+          isLoaded: true,
+        });
+      } else if (node.children && node.children.length > 0) {
+        // Recursively expand children
+        const expandedChildren = await expandAllRepositories(node.children);
+        expandedNodes.push({
+          ...node,
+          children: expandedChildren,
+        });
+      } else {
+        expandedNodes.push(node);
+      }
+    }
+
+    return expandedNodes;
+  }, [handleLoadChildren]);
 
   useEffect(() => {
     // Load settings from localStorage
