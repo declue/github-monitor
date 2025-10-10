@@ -4,7 +4,6 @@ import {
   Typography,
   Chip,
   Link,
-  IconButton,
   Collapse,
   CircularProgress,
 } from '@mui/material';
@@ -167,7 +166,7 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, on
         onClick={handleToggle}
       >
         {(hasChildren || node.hasChildren) && (
-          <IconButton size="small" sx={{ mr: 0.5, p: 0 }}>
+          <Box sx={{ mr: 0.5, display: 'flex', alignItems: 'center', width: 28 }}>
             {loading ? (
               <CircularProgress size={16} />
             ) : expanded ? (
@@ -175,7 +174,7 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, on
             ) : (
               <ChevronRight fontSize="small" />
             )}
-          </IconButton>
+          </Box>
         )}
         {!hasChildren && !node.hasChildren && <Box sx={{ width: 28 }} />}
 
