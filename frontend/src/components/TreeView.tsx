@@ -125,6 +125,7 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, on
   const shouldShowChildren = children.length > 0;
   const isToggleable = node.type === 'organization' || node.type === 'repository';
   const isEnabled = node.enabled !== false; // Default to true if not set
+  const isOrganization = node.type === 'organization';
 
   const handleToggle = async () => {
     if (!hasChildren && !node.hasChildren) return;
@@ -250,7 +251,7 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, on
         )}
       </Box>
 
-      {shouldShowChildren && isEnabled && (
+      {shouldShowChildren && (isOrganization || isEnabled) && (
         <Collapse in={expanded} timeout="auto" unmountOnExit>
           {children.map((child) => (
             <TreeNodeComponent
