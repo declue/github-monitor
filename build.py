@@ -12,7 +12,19 @@ from pathlib import Path
 def run_command(cmd, cwd=None):
     """Run a command and print output"""
     print(f"Running: {' '.join(cmd)}")
-    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+
+    # On Windows, use shell=True for npm and pyinstaller commands
+    if sys.platform == "win32" and cmd[0] in ["npm", "pyinstaller"]:
+        result = subprocess.run(
+            ' '.join(cmd),
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            shell=True
+        )
+    else:
+        result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+
     if result.stdout:
         print(result.stdout)
     if result.stderr:
@@ -27,11 +39,26 @@ def build_frontend():
     print("\n=== Building Frontend ===")
     frontend_dir = Path(__file__).parent / "frontend"
 
+    if not frontend_dir.exists():
+        raise Exception(f"Frontend directory not found at {frontend_dir}")
+
+    print(f"Frontend directory: {frontend_dir}")
+
+    # Check if package.json exists
+    package_json = frontend_dir / "package.json"
+    if not package_json.exists():
+        raise Exception(f"package.json not found at {package_json}")
+
     # Install dependencies
     run_command(["npm", "install"], cwd=frontend_dir)
 
     # Build
     run_command(["npm", "run", "build"], cwd=frontend_dir)
+
+    # Verify build output
+    dist_dir = frontend_dir / "dist"
+    if not dist_dir.exists():
+        raise Exception(f"Build output not found at {dist_dir}")
 
     print("✓ Frontend build completed")
 
