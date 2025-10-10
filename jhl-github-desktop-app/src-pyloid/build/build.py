@@ -67,9 +67,10 @@ if __name__ == '__main__':
 		'--clean',
 		'--noconfirm',
 		'--onefile',  # Single executable file
-		'--windowed',
+		'--console',  # Show console for debugging (change to --windowed for release)
 		'--add-data=./dist-front/:./dist-front/',
 		'--add-data=./backend/app/:./app/',
+		'--collect-all=app',  # Collect all modules from backend/app
 	]
 
 	# Add hidden imports
