@@ -1,6 +1,11 @@
-# Pyloid App
+# JHL GitHub Desktop
 
-This project was created using the Pyloid boilerplate.
+GitHub Actions Runner Monitor - Desktop Application
+
+**Author:** JHL (declue)
+**Repository:** https://github.com/declue/jhl-github-desktop
+
+This project was created using the Pyloid framework.
 
 ## Prerequisites
 
@@ -34,15 +39,52 @@ To build the application:
 npm run build
 ```
 
+## Features
+
+- ✅ GitHub Organizations 및 Repositories 트리 뷰
+- ✅ Workflows, Runs, Runners 실시간 모니터링
+- ✅ Branches, Pull Requests, Issues 확인
+- ✅ API Rate Limit 표시
+- ✅ 검색 및 필터링
+- ✅ 여러 GitHub 토큰 및 Enterprise 지원
+- ✅ 한글 UI
+
+## Technology Stack
+
+- **Frontend:** React 18 + TypeScript + Material-UI + Vite
+- **Backend:** FastAPI + Python 3.9+
+- **Desktop:** Pyloid (Electron for Python) + PySide6
+
 ## Project Structure
 
-The project consists of the following main directories and files:
+```
+jhl-github-desktop-app/
+├── src/                    # React frontend source
+├── src-pyloid/             # Pyloid Python source
+│   ├── main.py            # App entry point
+│   ├── server.py          # FastAPI adapter
+│   └── build/             # Build scripts
+├── backend/                # FastAPI backend
+│   └── app/               # GitHub API client
+├── dist-front/             # Frontend build output
+└── dist/                   # Executable output
+```
 
-- `dist/`: Directory where the final desktop application build files are stored.
-- `dist-front/`: Directory where the frontend code build files are stored.
-- `src/`: Directory where the frontend source code is stored.
-- `src-pyloid/`: Directory containing the backend source code for the Pyloid application.
+## Configuration
 
-## Support
+### GitHub Token
 
-If you encounter any issues or have questions, please create an issue in the repository.
+```bash
+export GITHUB_TOKEN=ghp_...
+export GITHUB_ORG=your-org  # Optional
+```
+
+Or configure via Settings dialog in the app.
+
+## License
+
+MIT
+
+---
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)

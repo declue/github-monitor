@@ -15,15 +15,15 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            platform: linux
-            artifact: jhl-github-desktop-linux.tar.gz
+          #          - os: ubuntu-latest
+          #            platform: linux
+          #            artifact: jhl-github-desktop-linux.tar.gz
           - os: windows-latest
             platform: windows
             artifact: jhl-github-desktop-windows.zip
-          - os: macos-latest
-            platform: macos
-            artifact: jhl-github-desktop-macos.zip
+            #          - os: macos-latest
+            #            platform: macos
+            #            artifact: jhl-github-desktop-macos.zip
 
     steps:
       - name: Checkout code
