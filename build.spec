@@ -20,10 +20,21 @@ hiddenimports = [
     'uvicorn.lifespan',
     'uvicorn.lifespan.on',
     'fastapi',
+    'fastapi.staticfiles',
+    'fastapi.responses',
+    'fastapi.middleware',
+    'fastapi.middleware.cors',
     'httpx',
     'pydantic',
+    'pydantic_core',
     'starlette',
+    'starlette.staticfiles',
+    'starlette.responses',
+    'starlette.middleware',
+    'starlette.middleware.cors',
     'pyloid',
+    'anyio',
+    'sniffio',
 ]
 
 # Collect all app modules
