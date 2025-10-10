@@ -12,6 +12,7 @@ import {
   IconButton,
   Tooltip,
   CircularProgress,
+  Button,
 } from '@mui/material';
 import { Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
 import type { SelectChangeEvent } from '@mui/material';
@@ -39,14 +40,23 @@ export const SearchFilter: React.FC<SearchFilterProps> = ({ onFilterChange }) =>
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const handleSearchChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setSearchText(value);
+  };
+
+  const handleSearchSubmit = async () => {
     setLoading(true);
     try {
-      await onFilterChange({ searchText: value, selectedTypes });
+      await onFilterChange({ searchText, selectedTypes });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      handleSearchSubmit();
     }
   };
 
@@ -78,9 +88,10 @@ export const SearchFilter: React.FC<SearchFilterProps> = ({ onFilterChange }) =>
         <TextField
           fullWidth
           label="Search"
-          placeholder="Search by name, status, or metadata..."
+          placeholder="Search by name, status, or metadata... (Press Enter or click Search)"
           value={searchText}
           onChange={handleSearchChange}
+          onKeyPress={handleKeyPress}
           variant="outlined"
           size="small"
           disabled={loading}
@@ -113,6 +124,16 @@ export const SearchFilter: React.FC<SearchFilterProps> = ({ onFilterChange }) =>
             ))}
           </Select>
         </FormControl>
+
+        <Button
+          variant="contained"
+          onClick={handleSearchSubmit}
+          disabled={loading}
+          startIcon={<SearchIcon />}
+          sx={{ whiteSpace: 'nowrap' }}
+        >
+          Search
+        </Button>
 
         {loading ? (
           <CircularProgress size={24} />
