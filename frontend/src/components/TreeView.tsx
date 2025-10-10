@@ -17,11 +17,11 @@ import {
   PlayArrow,
   Speed,
   CallSplit,
-  PullRequest,
+  MergeType,
   BugReport,
   CheckCircle,
   Cancel,
-  Pending,
+  HourglassEmpty,
   AccountTree,
 } from '@mui/icons-material';
 import { TreeNode as TreeNodeType } from '../types';
@@ -53,7 +53,7 @@ const getNodeIcon = (type: string, expanded: boolean) => {
       return <CallSplit {...iconProps} />;
     case 'pull_requests':
     case 'pull_request':
-      return <PullRequest {...iconProps} />;
+      return <MergeType {...iconProps} />;
     case 'issues':
     case 'issue':
       return <BugReport {...iconProps} />;
@@ -81,9 +81,9 @@ const getStatusIcon = (status?: string) => {
     case 'in_progress':
     case 'queued':
     case 'pending':
-      return <Pending {...iconProps} color="warning" />;
+      return <HourglassEmpty {...iconProps} color="warning" />;
     default:
-      return <Pending {...iconProps} color="info" />;
+      return <HourglassEmpty {...iconProps} color="info" />;
   }
 };
 
