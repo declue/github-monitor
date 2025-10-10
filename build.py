@@ -101,16 +101,24 @@ def create_archive():
 
     # Determine platform and create appropriate archive
     if sys.platform == "win32":
-        # Windows: Single executable file
+        # Windows: Check for both onefile and onedir
         exe_file = dist_dir / "jhl-github-desktop.exe"
-        if not exe_file.exists():
-            raise Exception(f"Build output not found at {exe_file}")
+        exe_dir = dist_dir / "jhl-github-desktop"
 
         archive_name = "jhl-github-desktop-windows"
-        # Create a temporary directory for the archive
         temp_dir = dist_dir / "temp_windows"
         temp_dir.mkdir(exist_ok=True)
-        shutil.copy(exe_file, temp_dir / "jhl-github-desktop.exe")
+
+        if exe_file.exists():
+            # Onefile mode: single executable
+            shutil.copy(exe_file, temp_dir / "jhl-github-desktop.exe")
+            print("[OK] Packaged onefile executable")
+        elif exe_dir.exists():
+            # Onedir mode: directory with executable and dependencies
+            shutil.copytree(exe_dir, temp_dir / "jhl-github-desktop")
+            print("[OK] Packaged onedir distribution")
+        else:
+            raise Exception(f"Build output not found at {exe_file} or {exe_dir}")
 
         # Create README
         readme = temp_dir / "README.txt"
@@ -130,9 +138,11 @@ def create_archive():
         print(f"[OK] Created {archive_name}.zip")
 
     elif sys.platform == "darwin":
-        # macOS: .app bundle or single executable
+        # macOS: .app bundle, single executable, or directory
         archive_name = "jhl-github-desktop-macos"
         app_bundle = dist_dir / "JHL GitHub Desktop.app"
+        exe_file = dist_dir / "jhl-github-desktop"
+        exe_dir = dist_dir / "jhl-github-desktop"
 
         if app_bundle.exists():
             # Archive the .app bundle
@@ -142,12 +152,9 @@ def create_archive():
                 dist_dir,
                 "JHL GitHub Desktop.app"
             )
-        else:
-            # Single executable
-            exe_file = dist_dir / "jhl-github-desktop"
-            if not exe_file.exists():
-                raise Exception(f"Build output not found at {exe_file}")
-
+            print("[OK] Packaged .app bundle")
+        elif exe_file.exists() and exe_file.is_file():
+            # Onefile mode: single executable
             temp_dir = dist_dir / "temp_macos"
             temp_dir.mkdir(exist_ok=True)
             shutil.copy(exe_file, temp_dir / "jhl-github-desktop")
@@ -167,19 +174,44 @@ def create_archive():
                 temp_dir
             )
             shutil.rmtree(temp_dir)
+            print("[OK] Packaged onefile executable")
+        elif exe_dir.exists() and exe_dir.is_dir():
+            # Onedir mode: directory with executable and dependencies
+            temp_dir = dist_dir / "temp_macos"
+            temp_dir.mkdir(exist_ok=True)
+            shutil.copytree(exe_dir, temp_dir / "jhl-github-desktop")
+
+            shutil.make_archive(
+                str(dist_dir / archive_name),
+                'zip',
+                temp_dir
+            )
+            shutil.rmtree(temp_dir)
+            print("[OK] Packaged onedir distribution")
+        else:
+            raise Exception(f"Build output not found at {app_bundle}, {exe_file}, or {exe_dir}")
 
         print(f"[OK] Created {archive_name}.zip")
 
     else:  # Linux
-        # Linux: Single executable
+        # Linux: Check for both onefile and onedir
         exe_file = dist_dir / "jhl-github-desktop"
-        if not exe_file.exists():
-            raise Exception(f"Build output not found at {exe_file}")
+        exe_dir = dist_dir / "jhl-github-desktop"
 
         archive_name = "jhl-github-desktop-linux"
         temp_dir = dist_dir / "temp_linux"
         temp_dir.mkdir(exist_ok=True)
-        shutil.copy(exe_file, temp_dir / "jhl-github-desktop")
+
+        if exe_file.exists() and exe_file.is_file():
+            # Onefile mode: single executable
+            shutil.copy(exe_file, temp_dir / "jhl-github-desktop")
+            print("[OK] Packaged onefile executable")
+        elif exe_dir.exists() and exe_dir.is_dir():
+            # Onedir mode: directory with executable and dependencies
+            shutil.copytree(exe_dir, temp_dir / "jhl-github-desktop")
+            print("[OK] Packaged onedir distribution")
+        else:
+            raise Exception(f"Build output not found at {exe_file} or {exe_dir}")
 
         readme = temp_dir / "README.txt"
         readme.write_text(
