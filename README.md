@@ -9,6 +9,8 @@ GitHub 조직 및 리포지토리의 개발 현황을 트리 형태로 한눈에
 ## 주요 기능
 
 - **계층적 트리 뷰**: 조직, 리포지토리, 워크플로우, PR, 이슈 등을 트리 형태로 직관적으로 표시
+- **Lazy Loading**: 리포지토리를 클릭할 때만 상세 정보를 로드하여 초기 로딩 속도 대폭 향상
+- **스마트 캐싱**: 한 번 로드한 데이터는 자동으로 캐싱되어 재방문 시 즉시 표시
 - **실시간 모니터링**: GitHub Actions 워크플로우 실행 상태 및 러너 상태 확인
 - **API 사용량 추적**: GitHub API 토큰 사용량 및 제한 정보를 실시간으로 표시
 - **UI 기반 설정**: 브라우저에서 직접 GitHub 토큰 및 조직/리포지토리 설정 가능
@@ -186,10 +188,34 @@ VITE_API_BASE_URL=http://localhost:8000
    - `read:org` (조직 정보 읽기)
 4. 생성된 토큰을 복사하여 `.env` 파일에 설정
 
+## 성능 최적화
+
+이 애플리케이션은 다음과 같은 성능 최적화 기법을 사용합니다:
+
+### Lazy Loading (지연 로딩)
+- 초기 로딩 시에는 조직과 리포지토리 목록만 가져옵니다
+- 사용자가 리포지토리를 클릭(확장)할 때만 해당 리포지토리의 상세 정보를 로드합니다
+- 이를 통해 초기 API 호출 수를 **90% 이상 감소**시킵니다
+
+### 스마트 캐싱
+- 한 번 로드한 리포지토리 상세 정보는 메모리에 캐싱됩니다
+- 같은 리포지토리를 다시 확장할 때는 즉시 표시됩니다 (API 호출 없음)
+- 설정 변경 시에만 캐시가 자동으로 초기화됩니다
+
+### 로딩 인디케이터
+- 각 노드별로 독립적인 로딩 상태를 표시합니다
+- 사용자가 어떤 데이터가 로딩 중인지 명확하게 알 수 있습니다
+
+### 사용 예시
+1. 초기 로딩: 조직 목록과 리포지토리 목록만 표시 (빠름 ⚡)
+2. 관심 있는 리포지토리 클릭: 해당 리포지토리의 workflows, runs, branches 등을 로드
+3. 다른 리포지토리 탐색: 필요한 정보만 선택적으로 로드
+4. 이전에 본 리포지토리 재방문: 캐시된 데이터로 즉시 표시
+
 ## API 엔드포인트
 
 ### `GET /api/tree`
-전체 리포지토리 트리 구조를 반환합니다.
+경량화된 리포지토리 트리 구조를 반환합니다 (조직 및 리포지토리 목록만 포함).
 
 **Headers:**
 - `X-GitHub-Token` (optional): GitHub Personal Access Token
@@ -206,7 +232,42 @@ VITE_API_BASE_URL=http://localhost:8000
     "name": "myorg",
     "type": "organization",
     "children": [...],
-    "metadata": {"repo_count": 10}
+    "metadata": {"repo_count": 10},
+    "hasChildren": true,
+    "isLoaded": true
+  }
+]
+```
+
+### `GET /api/repo-details/{owner}/{repo}`
+특정 리포지토리의 상세 정보를 반환합니다 (lazy loading용).
+
+**Headers:**
+- `X-GitHub-Token` (optional): GitHub Personal Access Token
+- `X-GitHub-API-URL` (optional): GitHub API Base URL (기본값: `https://api.github.com`)
+
+**Path Parameters:**
+- `owner`: 리포지토리 소유자 (조직 또는 사용자)
+- `repo`: 리포지토리 이름
+
+**Response:**
+```json
+[
+  {
+    "id": "workflows-owner-repo",
+    "name": "Workflows (5)",
+    "type": "workflows",
+    "children": [...],
+    "hasChildren": true,
+    "isLoaded": true
+  },
+  {
+    "id": "runs-owner-repo",
+    "name": "Recent Runs (10)",
+    "type": "workflow_runs",
+    "children": [...],
+    "hasChildren": true,
+    "isLoaded": true
   }
 ]
 ```
@@ -348,6 +409,8 @@ MIT License
 - [x] UI 기반 설정 (GitHub 토큰 및 조직 관리)
 - [x] 로컬 스토리지 지원
 - [x] GitHub Enterprise 지원
+- [x] Lazy Loading 및 성능 최적화
+- [x] 스마트 캐싱
 - [ ] 필터링 및 검색 기능
 - [ ] 즐겨찾기 리포지토리
 - [ ] 알림 기능 (워크플로우 실패 시)

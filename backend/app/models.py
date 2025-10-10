@@ -17,6 +17,8 @@ class TreeNode(BaseModel):
     url: Optional[str] = None
     children: List['TreeNode'] = []
     metadata: Dict[str, Any] = {}
+    hasChildren: bool = False  # Indicates if node has children to load
+    isLoaded: bool = False  # Indicates if children are already loaded
 
 
 TreeNode.model_rebuild()

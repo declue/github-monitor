@@ -6,6 +6,8 @@ export interface TreeNode {
   url?: string;
   children: TreeNode[];
   metadata: Record<string, any>;
+  hasChildren?: boolean;  // Indicates if node has children to load
+  isLoaded?: boolean;     // Indicates if children are already loaded
 }
 
 export interface RateLimitInfo {

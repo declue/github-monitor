@@ -67,7 +67,7 @@ async def get_tree(
     x_github_token: Optional[str] = Header(None),
     x_github_api_url: Optional[str] = Header(None)
 ):
-    """Get the complete repository tree structure
+    """Get the lightweight repository tree structure (organizations and repositories only)
 
     Args:
         orgs: Comma-separated list of organizations/users to filter
@@ -97,14 +97,14 @@ async def get_tree(
             # Also include personal repos
             personal_repos = await client.get_user_repos()
             if personal_repos:
-                personal_node = await build_org_tree(client, "Personal Repositories", personal_repos)
+                personal_node = await build_org_tree_lightweight(client, "Personal Repositories", personal_repos)
                 tree_nodes.append(personal_node)
 
-        # Build tree for each organization
+        # Build tree for each organization (lightweight - repos only)
         for org_data in orgs_to_fetch:
             org_login = org_data["login"]
             repos = await client.get_org_repos(org_login)
-            org_node = await build_org_tree(client, org_login, repos)
+            org_node = await build_org_tree_lightweight(client, org_login, repos)
             tree_nodes.append(org_node)
 
         await client.close()
@@ -116,13 +116,51 @@ async def get_tree(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-async def build_org_tree(client: GitHubClient, org_name: str, repos: List[dict]) -> TreeNode:
-    """Build tree structure for an organization"""
+async def build_org_tree_lightweight(client: GitHubClient, org_name: str, repos: List[dict]) -> TreeNode:
+    """Build lightweight tree structure for an organization (repos only, no details)"""
     org_node = TreeNode(
         id=f"org-{org_name}",
         name=org_name,
         type="organization",
-        metadata={"repo_count": len(repos)}
+        metadata={"repo_count": len(repos)},
+        hasChildren=len(repos) > 0,
+        isLoaded=True
+    )
+
+    for repo in repos:
+        owner = repo["owner"]["login"]
+        repo_name = repo["name"]
+
+        repo_node = TreeNode(
+            id=f"repo-{owner}-{repo_name}",
+            name=repo_name,
+            type="repository",
+            url=repo["html_url"],
+            metadata={
+                "description": repo.get("description"),
+                "private": repo.get("private", False),
+                "language": repo.get("language"),
+                "stars": repo.get("stargazers_count", 0),
+                "updated_at": repo.get("updated_at"),
+                "owner": owner
+            },
+            hasChildren=True,  # Repository details will be loaded on demand
+            isLoaded=False
+        )
+        org_node.children.append(repo_node)
+
+    return org_node
+
+
+async def build_org_tree(client: GitHubClient, org_name: str, repos: List[dict]) -> TreeNode:
+    """Build tree structure for an organization (legacy - full load)"""
+    org_node = TreeNode(
+        id=f"org-{org_name}",
+        name=org_name,
+        type="organization",
+        metadata={"repo_count": len(repos)},
+        hasChildren=len(repos) > 0,
+        isLoaded=True
     )
 
     for repo in repos:
@@ -133,7 +171,7 @@ async def build_org_tree(client: GitHubClient, org_name: str, repos: List[dict])
 
 
 async def build_repo_tree(client: GitHubClient, repo: dict) -> TreeNode:
-    """Build tree structure for a repository"""
+    """Build tree structure for a repository with all details"""
     owner = repo["owner"]["login"]
     repo_name = repo["name"]
 
@@ -147,8 +185,11 @@ async def build_repo_tree(client: GitHubClient, repo: dict) -> TreeNode:
             "private": repo.get("private", False),
             "language": repo.get("language"),
             "stars": repo.get("stargazers_count", 0),
-            "updated_at": repo.get("updated_at")
-        }
+            "updated_at": repo.get("updated_at"),
+            "owner": owner
+        },
+        hasChildren=False,
+        isLoaded=True
     )
 
     # Get workflows
@@ -282,6 +323,202 @@ async def build_repo_tree(client: GitHubClient, repo: dict) -> TreeNode:
         repo_node.children.append(issues_node)
 
     return repo_node
+
+
+async def build_repo_details(client: GitHubClient, owner: str, repo_name: str) -> List[TreeNode]:
+    """Build detailed children for a repository (workflows, runs, runners, branches, PRs, issues)"""
+    children = []
+
+    # Get workflows
+    workflows = await client.get_workflows(owner, repo_name)
+    if workflows:
+        workflows_node = TreeNode(
+            id=f"workflows-{owner}-{repo_name}",
+            name=f"Workflows ({len(workflows)})",
+            type="workflows",
+            hasChildren=len(workflows) > 0,
+            isLoaded=True
+        )
+        for workflow in workflows[:20]:  # Limit to 20
+            workflow_node = TreeNode(
+                id=f"workflow-{workflow['id']}",
+                name=workflow["name"],
+                type="workflow",
+                status=workflow.get("state"),
+                url=workflow.get("html_url"),
+                metadata={"path": workflow.get("path")},
+                hasChildren=False,
+                isLoaded=True
+            )
+            workflows_node.children.append(workflow_node)
+        children.append(workflows_node)
+
+    # Get workflow runs
+    workflow_runs = await client.get_workflow_runs(owner, repo_name, per_page=10)
+    if workflow_runs:
+        runs_node = TreeNode(
+            id=f"runs-{owner}-{repo_name}",
+            name=f"Recent Runs ({len(workflow_runs)})",
+            type="workflow_runs",
+            hasChildren=len(workflow_runs) > 0,
+            isLoaded=True
+        )
+        for run in workflow_runs[:10]:
+            run_node = TreeNode(
+                id=f"run-{run['id']}",
+                name=f"{run['name']} #{run['run_number']}",
+                type="workflow_run",
+                status=run.get("conclusion", run.get("status")),
+                url=run.get("html_url"),
+                metadata={
+                    "created_at": run.get("created_at"),
+                    "updated_at": run.get("updated_at")
+                },
+                hasChildren=False,
+                isLoaded=True
+            )
+            runs_node.children.append(run_node)
+        children.append(runs_node)
+
+    # Get runners
+    runners = await client.get_runners(owner, repo_name)
+    if runners:
+        runners_node = TreeNode(
+            id=f"runners-{owner}-{repo_name}",
+            name=f"Runners ({len(runners)})",
+            type="runners",
+            hasChildren=len(runners) > 0,
+            isLoaded=True
+        )
+        for runner in runners:
+            runner_node = TreeNode(
+                id=f"runner-{runner['id']}",
+                name=runner["name"],
+                type="runner",
+                status=runner.get("status"),
+                metadata={
+                    "os": runner.get("os"),
+                    "busy": runner.get("busy")
+                },
+                hasChildren=False,
+                isLoaded=True
+            )
+            runners_node.children.append(runner_node)
+        children.append(runners_node)
+
+    # Get branches
+    branches = await client.get_branches(owner, repo_name)
+    if branches:
+        branches_node = TreeNode(
+            id=f"branches-{owner}-{repo_name}",
+            name=f"Branches ({len(branches)})",
+            type="branches",
+            hasChildren=len(branches) > 0,
+            isLoaded=True
+        )
+        for branch in branches[:20]:  # Limit to 20
+            branch_node = TreeNode(
+                id=f"branch-{owner}-{repo_name}-{branch['name']}",
+                name=branch["name"],
+                type="branch",
+                metadata={"protected": branch.get("protected", False)},
+                hasChildren=False,
+                isLoaded=True
+            )
+            branches_node.children.append(branch_node)
+        children.append(branches_node)
+
+    # Get pull requests
+    pull_requests = await client.get_pull_requests(owner, repo_name)
+    if pull_requests:
+        prs_node = TreeNode(
+            id=f"prs-{owner}-{repo_name}",
+            name=f"Pull Requests ({len(pull_requests)})",
+            type="pull_requests",
+            hasChildren=len(pull_requests) > 0,
+            isLoaded=True
+        )
+        for pr in pull_requests[:20]:  # Limit to 20
+            pr_node = TreeNode(
+                id=f"pr-{pr['id']}",
+                name=f"#{pr['number']} {pr['title']}",
+                type="pull_request",
+                status=pr.get("state"),
+                url=pr.get("html_url"),
+                metadata={
+                    "created_at": pr.get("created_at"),
+                    "updated_at": pr.get("updated_at"),
+                    "draft": pr.get("draft", False)
+                },
+                hasChildren=False,
+                isLoaded=True
+            )
+            prs_node.children.append(pr_node)
+        children.append(prs_node)
+
+    # Get issues
+    issues = await client.get_issues(owner, repo_name)
+    if issues:
+        issues_node = TreeNode(
+            id=f"issues-{owner}-{repo_name}",
+            name=f"Issues ({len(issues)})",
+            type="issues",
+            hasChildren=len(issues) > 0,
+            isLoaded=True
+        )
+        for issue in issues[:20]:  # Limit to 20
+            issue_node = TreeNode(
+                id=f"issue-{issue['id']}",
+                name=f"#{issue['number']} {issue['title']}",
+                type="issue",
+                status=issue.get("state"),
+                url=issue.get("html_url"),
+                metadata={
+                    "created_at": issue.get("created_at"),
+                    "updated_at": issue.get("updated_at")
+                },
+                hasChildren=False,
+                isLoaded=True
+            )
+            issues_node.children.append(issue_node)
+        children.append(issues_node)
+
+    return children
+
+
+@app.get("/api/repo-details/{owner}/{repo}", response_model=List[TreeNode])
+async def get_repo_details(
+    owner: str,
+    repo: str,
+    x_github_token: Optional[str] = Header(None),
+    x_github_api_url: Optional[str] = Header(None)
+):
+    """Get detailed information for a specific repository (lazy loaded)
+
+    Args:
+        owner: Repository owner (organization or user)
+        repo: Repository name
+        x_github_token: GitHub personal access token (in header)
+        x_github_api_url: GitHub API base URL (in header, for Enterprise support)
+    """
+    try:
+        token = x_github_token or (settings.github_token if settings.github_token else None)
+        if not token:
+            raise HTTPException(status_code=401, detail="GitHub token is required")
+
+        api_url = x_github_api_url or "https://api.github.com"
+        client = get_github_client(token, api_url)
+
+        # Build detailed children for this repository
+        children = await build_repo_details(client, owner, repo)
+
+        await client.close()
+        return children
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/")

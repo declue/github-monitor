@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Container,
@@ -18,7 +18,7 @@ import { Refresh, GitHub, Settings as SettingsIcon } from '@mui/icons-material';
 import { TreeView } from './components/TreeView';
 import { RateLimitDisplay } from './components/RateLimitDisplay';
 import { SettingsDialog } from './components/SettingsDialog';
-import { fetchTree, fetchRateLimit } from './api';
+import { fetchTree, fetchRateLimit, fetchRepoDetails } from './api';
 import type { TreeNode, RateLimitInfo } from './types';
 import { loadSettings, saveSettings } from './utils/storage';
 
@@ -60,6 +60,9 @@ function App() {
   const [orgs, setOrgs] = useState<string[]>([]);
   const [githubApiUrl, setGithubApiUrl] = useState('https://api.github.com');
 
+  // Cache for repository details to avoid redundant API calls
+  const repoDetailsCache = useRef<Map<string, TreeNode[]>>(new Map());
+
   const loadData = async () => {
     if (!token) {
       setError('Please configure your GitHub token in settings');
@@ -92,7 +95,41 @@ function App() {
     setOrgs(newOrgs);
     setGithubApiUrl(newGithubApiUrl);
     saveSettings({ token: newToken, orgs: newOrgs, githubApiUrl: newGithubApiUrl });
+    // Clear cache when settings change
+    repoDetailsCache.current.clear();
   };
+
+  const handleLoadChildren = useCallback(async (node: TreeNode): Promise<TreeNode[]> => {
+    // Only handle repository nodes for lazy loading
+    if (node.type !== 'repository') {
+      return node.children || [];
+    }
+
+    const owner = node.metadata?.owner;
+    const repo = node.name;
+
+    if (!owner || !repo) {
+      console.error('Missing owner or repo name for node:', node);
+      return [];
+    }
+
+    const cacheKey = `${owner}/${repo}`;
+
+    // Check cache first
+    if (repoDetailsCache.current.has(cacheKey)) {
+      return repoDetailsCache.current.get(cacheKey)!;
+    }
+
+    try {
+      const children = await fetchRepoDetails(owner, repo, token, githubApiUrl);
+      // Cache the result
+      repoDetailsCache.current.set(cacheKey, children);
+      return children;
+    } catch (error) {
+      console.error(`Failed to load details for ${owner}/${repo}:`, error);
+      return [];
+    }
+  }, [token, githubApiUrl]);
 
   useEffect(() => {
     // Load settings from localStorage
@@ -208,7 +245,7 @@ function App() {
                 borderRadius: 2,
               }}
             >
-              <TreeView data={treeData} />
+              <TreeView data={treeData} onLoadChildren={handleLoadChildren} />
             </Paper>
           )}
         </Container>

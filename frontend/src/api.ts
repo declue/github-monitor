@@ -25,3 +25,17 @@ export const fetchRateLimit = async (token?: string, githubApiUrl?: string): Pro
   const response = await api.get<RateLimitInfo>('/api/rate-limit', { headers });
   return response.data;
 };
+
+export const fetchRepoDetails = async (
+  owner: string,
+  repo: string,
+  token?: string,
+  githubApiUrl?: string
+): Promise<TreeNode[]> => {
+  const headers = {
+    ...(token && { 'X-GitHub-Token': token }),
+    ...(githubApiUrl && { 'X-GitHub-API-URL': githubApiUrl }),
+  };
+  const response = await api.get<TreeNode[]>(`/api/repo-details/${owner}/${repo}`, { headers });
+  return response.data;
+};

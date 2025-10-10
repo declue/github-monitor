@@ -6,6 +6,7 @@ import {
   Link,
   IconButton,
   Collapse,
+  CircularProgress,
 } from '@mui/material';
 import {
   ChevronRight,
@@ -29,6 +30,7 @@ import type { TreeNode as TreeNodeType } from '../types';
 interface TreeNodeProps {
   node: TreeNodeType;
   level?: number;
+  onLoadChildren?: (node: TreeNodeType) => Promise<TreeNodeType[]>;
 }
 
 const getNodeIcon = (type: string, expanded: boolean) => {
@@ -111,13 +113,39 @@ const getStatusColor = (status?: string) => {
   }
 };
 
-export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0 }) => {
+export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, onLoadChildren }) => {
   const [expanded, setExpanded] = useState(level < 2);
-  const hasChildren = node.children && node.children.length > 0;
+  const [loading, setLoading] = useState(false);
+  const [localChildren, setLocalChildren] = useState<TreeNodeType[]>(node.children || []);
+  const [isChildrenLoaded, setIsChildrenLoaded] = useState(node.isLoaded || false);
 
-  const handleToggle = () => {
-    if (hasChildren) {
-      setExpanded(!expanded);
+  const hasChildren = (node.hasChildren || localChildren.length > 0) && !loading;
+  const shouldShowChildren = localChildren.length > 0;
+
+  const handleToggle = async () => {
+    if (!hasChildren && !node.hasChildren) return;
+
+    // If we're collapsing, just toggle
+    if (expanded) {
+      setExpanded(false);
+      return;
+    }
+
+    // If expanding and children not loaded yet, fetch them
+    if (!isChildrenLoaded && node.hasChildren && onLoadChildren) {
+      setLoading(true);
+      try {
+        const children = await onLoadChildren(node);
+        setLocalChildren(children);
+        setIsChildrenLoaded(true);
+        setExpanded(true);
+      } catch (error) {
+        console.error('Failed to load children:', error);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      setExpanded(true);
     }
   };
 
@@ -138,12 +166,18 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0 }) 
         }}
         onClick={handleToggle}
       >
-        {hasChildren && (
+        {(hasChildren || node.hasChildren) && (
           <IconButton size="small" sx={{ mr: 0.5, p: 0 }}>
-            {expanded ? <ExpandMore fontSize="small" /> : <ChevronRight fontSize="small" />}
+            {loading ? (
+              <CircularProgress size={16} />
+            ) : expanded ? (
+              <ExpandMore fontSize="small" />
+            ) : (
+              <ChevronRight fontSize="small" />
+            )}
           </IconButton>
         )}
-        {!hasChildren && <Box sx={{ width: 28 }} />}
+        {!hasChildren && !node.hasChildren && <Box sx={{ width: 28 }} />}
 
         <Box sx={{ mr: 1, display: 'flex', alignItems: 'center' }}>
           {getNodeIcon(node.type, expanded)}
@@ -195,10 +229,10 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0 }) 
         )}
       </Box>
 
-      {hasChildren && (
+      {shouldShowChildren && (
         <Collapse in={expanded} timeout="auto" unmountOnExit>
-          {node.children.map((child) => (
-            <TreeNodeComponent key={child.id} node={child} level={level + 1} />
+          {localChildren.map((child) => (
+            <TreeNodeComponent key={child.id} node={child} level={level + 1} onLoadChildren={onLoadChildren} />
           ))}
         </Collapse>
       )}
@@ -208,13 +242,14 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0 }) 
 
 interface TreeViewProps {
   data: TreeNodeType[];
+  onLoadChildren?: (node: TreeNodeType) => Promise<TreeNodeType[]>;
 }
 
-export const TreeView: React.FC<TreeViewProps> = ({ data }) => {
+export const TreeView: React.FC<TreeViewProps> = ({ data, onLoadChildren }) => {
   return (
     <Box sx={{ width: '100%' }}>
       {data.map((node) => (
-        <TreeNodeComponent key={node.id} node={node} />
+        <TreeNodeComponent key={node.id} node={node} onLoadChildren={onLoadChildren} />
       ))}
     </Box>
   );
