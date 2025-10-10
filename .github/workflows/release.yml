@@ -1,0 +1,124 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            artifact: github-actions-runner-monitor-linux.tar.gz
+          - os: windows-latest
+            platform: windows
+            artifact: github-actions-runner-monitor-windows.zip
+          - os: macos-latest
+            platform: macos
+            artifact: github-actions-runner-monitor-macos.zip
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-pyloid.txt
+
+      - name: Build application
+        run: python build.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-build
+          path: dist/${{ matrix.artifact }}
+          retention-days: 1
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Read version info
+        id: version_info
+        run: |
+          VERSION=$(cat backend/app/version.py | grep '__version__' | cut -d'"' -f2)
+          echo "APP_VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## GitHub Actions Runner Monitor ${{ steps.get_version.outputs.VERSION }}
+
+            ### Downloads
+            - **Windows**: `github-actions-runner-monitor-windows.zip`
+            - **macOS**: `github-actions-runner-monitor-macos.zip`
+            - **Linux**: `github-actions-runner-monitor-linux.tar.gz`
+
+            ### Installation
+
+            #### Windows
+            1. Download `github-actions-runner-monitor-windows.zip`
+            2. Extract the archive
+            3. Run `github-actions-runner-monitor.exe`
+
+            #### macOS
+            1. Download `github-actions-runner-monitor-macos.zip`
+            2. Extract the archive
+            3. Run `GitHub Actions Runner Monitor.app` (or the executable inside)
+
+            #### Linux
+            1. Download `github-actions-runner-monitor-linux.tar.gz`
+            2. Extract: `tar -xzf github-actions-runner-monitor-linux.tar.gz`
+            3. Run: `./github-actions-runner-monitor/github-actions-runner-monitor`
+
+            ### Configuration
+            On first launch, configure your GitHub token and organizations in the settings dialog.
+
+            ### What's New
+            See the commit history for changes in this release.
+
+            ---
+            🤖 Built with [Pyloid](https://github.com/pyloid/pyloid) | Generated with [Claude Code](https://claude.com/claude-code)
+          files: |
+            artifacts/linux-build/github-actions-runner-monitor-linux.tar.gz
+            artifacts/windows-build/github-actions-runner-monitor-windows.zip
+            artifacts/macos-build/github-actions-runner-monitor-macos.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
