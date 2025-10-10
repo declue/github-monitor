@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Build script for creating standalone executables
 """
@@ -7,6 +8,12 @@ import sys
 import shutil
 import subprocess
 from pathlib import Path
+
+# Force UTF-8 encoding for Windows
+if sys.platform == "win32":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 
 def run_command(cmd, cwd=None):
@@ -20,10 +27,19 @@ def run_command(cmd, cwd=None):
             cwd=cwd,
             capture_output=True,
             text=True,
-            shell=True
+            shell=True,
+            encoding='utf-8',
+            errors='replace'
         )
     else:
-        result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+        result = subprocess.run(
+            cmd,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            errors='replace'
+        )
 
     if result.stdout:
         print(result.stdout)
@@ -60,7 +76,7 @@ def build_frontend():
     if not dist_dir.exists():
         raise Exception(f"Build output not found at {dist_dir}")
 
-    print("✓ Frontend build completed")
+    print("[OK] Frontend build completed")
 
 
 def build_executable():
@@ -74,7 +90,7 @@ def build_executable():
         "build.spec"
     ])
 
-    print("✓ Executable build completed")
+    print("[OK] Executable build completed")
 
 
 def create_archive():
@@ -95,7 +111,7 @@ def create_archive():
             'zip',
             app_dir
         )
-        print(f"✓ Created {archive_name}.zip")
+        print(f"[OK] Created {archive_name}.zip")
     elif sys.platform == "darwin":
         archive_name = "jhl-github-desktop-macos"
         # For macOS, look for .app bundle
@@ -113,7 +129,7 @@ def create_archive():
                 'zip',
                 app_dir
             )
-        print(f"✓ Created {archive_name}.zip")
+        print(f"[OK] Created {archive_name}.zip")
     else:  # Linux
         archive_name = "jhl-github-desktop-linux"
         shutil.make_archive(
@@ -121,7 +137,7 @@ def create_archive():
             'gztar',
             app_dir
         )
-        print(f"✓ Created {archive_name}.tar.gz")
+        print(f"[OK] Created {archive_name}.tar.gz")
 
 
 def main():
@@ -142,11 +158,11 @@ def main():
         create_archive()
 
         print("\n" + "=" * 50)
-        print("✓ Build completed successfully!")
+        print("[SUCCESS] Build completed successfully!")
         print(f"Distribution files are in: {Path(__file__).parent / 'dist'}")
 
     except Exception as e:
-        print(f"\n✗ Build failed: {e}", file=sys.stderr)
+        print(f"\n[ERROR] Build failed: {e}", file=sys.stderr)
         sys.exit(1)
 
 
