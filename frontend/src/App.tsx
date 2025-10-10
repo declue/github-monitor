@@ -132,7 +132,20 @@ function App() {
     const updateNodeEnabled = (nodes: TreeNode[]): TreeNode[] => {
       return nodes.map(node => {
         if (node.id === nodeId) {
-          return { ...node, enabled };
+          // If this is the node being toggled, update it and all its children
+          const updateChildrenEnabled = (children: TreeNode[]): TreeNode[] => {
+            return children.map(child => ({
+              ...child,
+              enabled,
+              children: child.children ? updateChildrenEnabled(child.children) : [],
+            }));
+          };
+
+          return {
+            ...node,
+            enabled,
+            children: node.children ? updateChildrenEnabled(node.children) : [],
+          };
         }
         if (node.children && node.children.length > 0) {
           return {
