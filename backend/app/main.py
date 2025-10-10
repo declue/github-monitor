@@ -1,11 +1,17 @@
 from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
+from datetime import datetime
 from app.github_client import GitHubClient
 from app.models import TreeNode, RateLimitInfo
 from app.config import settings
+from app.version import __version__, __app_name__, __description__
 
-app = FastAPI(title="GitHub Repository Explorer API")
+app = FastAPI(
+    title=__app_name__,
+    description=__description__,
+    version=__version__
+)
 
 # Configure CORS
 app.add_middleware(
@@ -523,7 +529,35 @@ async def get_repo_details(
 
 @app.get("/")
 async def root():
-    return {"message": "GitHub Repository Explorer API", "status": "running"}
+    """Root endpoint with basic API information"""
+    return {
+        "name": __app_name__,
+        "version": __version__,
+        "description": __description__,
+        "status": "running",
+        "docs_url": "/docs",
+    }
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring and load balancers"""
+    return {
+        "status": "healthy",
+        "version": __version__,
+        "timestamp": datetime.utcnow().isoformat(),
+        "service": __app_name__,
+    }
+
+
+@app.get("/api/version")
+async def get_version():
+    """Get API version information"""
+    return {
+        "version": __version__,
+        "name": __app_name__,
+        "description": __description__,
+    }
 
 
 if __name__ == "__main__":

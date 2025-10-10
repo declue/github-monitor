@@ -13,6 +13,7 @@ import {
   Alert,
   IconButton,
   Tooltip,
+  Chip,
 } from '@mui/material';
 import { Refresh, GitHub, Settings as SettingsIcon } from '@mui/icons-material';
 import { TreeView } from './components/TreeView';
@@ -24,6 +25,7 @@ import { fetchTree, fetchRateLimit, fetchRepoDetails } from './api';
 import type { TreeNode, RateLimitInfo } from './types';
 import { loadSettings, saveSettings } from './utils/storage';
 import { filterTreeNodes, countTreeNodes } from './utils/filterTree';
+import { getVersionInfo, ENVIRONMENT } from './config/version';
 
 const darkTheme = createTheme({
   palette: {
@@ -66,6 +68,10 @@ function App() {
 
   // Cache for repository details to avoid redundant API calls
   const repoDetailsCache = useRef<Map<string, TreeNode[]>>(new Map());
+
+  const versionInfo = getVersionInfo();
+  const isDevelopment = ENVIRONMENT === 'development';
+  const isProduction = ENVIRONMENT === 'production';
 
   const loadData = async () => {
     if (!token) {
@@ -216,8 +222,26 @@ function App() {
           <Toolbar>
             <GitHub sx={{ mr: 2 }} />
             <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-              GitHub Repository Explorer
+              GitHub Actions Runner Monitor
             </Typography>
+
+            {!isProduction && (
+              <Chip
+                label={ENVIRONMENT.toUpperCase()}
+                size="small"
+                color={isDevelopment ? 'warning' : 'info'}
+                sx={{ mr: 2, fontWeight: 'bold' }}
+              />
+            )}
+
+            <Tooltip title={`Version ${versionInfo.version}`}>
+              <Chip
+                label={`v${versionInfo.version}`}
+                size="small"
+                variant="outlined"
+                sx={{ mr: 2, color: 'text.secondary', borderColor: 'text.secondary' }}
+              />
+            </Tooltip>
 
             {rateLimit && <RateLimitDisplay rateLimit={rateLimit} />}
 
@@ -328,8 +352,13 @@ function App() {
           }}
         >
           <Typography variant="body2" color="text.secondary">
-            GitHub Repository Explorer - Monitor your development status at a glance
+            GitHub Actions Runner Monitor v{versionInfo.version} - Monitor your development status at a glance
           </Typography>
+          {isDevelopment && (
+            <Typography variant="caption" color="warning.main" display="block" sx={{ mt: 0.5 }}>
+              Development Mode | Build: {versionInfo.buildDate}
+            </Typography>
+          )}
         </Box>
       </Box>
 
