@@ -132,32 +132,20 @@ function App() {
     const updateNodeEnabled = (nodes: TreeNode[]): TreeNode[] => {
       return nodes.map(node => {
         if (node.id === nodeId) {
-          // Only update the node itself, not its children
-          // This allows individual repo selection even if org is unchecked
-          const isRepo = node.type === 'repository';
-
-          if (isRepo) {
-            // For repos, also update all its children (workflows, runners, etc.)
-            const updateChildrenEnabled = (children: TreeNode[]): TreeNode[] => {
-              return children.map(child => ({
-                ...child,
-                enabled,
-                children: child.children ? updateChildrenEnabled(child.children) : [],
-              }));
-            };
-
-            return {
-              ...node,
+          // Recursively update all children (repos under org, or workflows/runners under repo)
+          const updateChildrenEnabled = (children: TreeNode[]): TreeNode[] => {
+            return children.map(child => ({
+              ...child,
               enabled,
-              children: node.children ? updateChildrenEnabled(node.children) : [],
-            };
-          } else {
-            // For orgs, only update the org itself, keep repo enabled states independent
-            return {
-              ...node,
-              enabled,
-            };
-          }
+              children: child.children ? updateChildrenEnabled(child.children) : [],
+            }));
+          };
+
+          return {
+            ...node,
+            enabled,
+            children: node.children ? updateChildrenEnabled(node.children) : [],
+          };
         }
         if (node.children && node.children.length > 0) {
           return {
