@@ -98,25 +98,44 @@ def create_archive():
     print("\n=== Creating Distribution Archive ===")
 
     dist_dir = Path(__file__).parent / "dist"
-    app_dir = dist_dir / "jhl-github-desktop"
-
-    if not app_dir.exists():
-        raise Exception(f"Build output not found at {app_dir}")
 
     # Determine platform and create appropriate archive
     if sys.platform == "win32":
+        # Windows: Single executable file
+        exe_file = dist_dir / "jhl-github-desktop.exe"
+        if not exe_file.exists():
+            raise Exception(f"Build output not found at {exe_file}")
+
         archive_name = "jhl-github-desktop-windows"
+        # Create a temporary directory for the archive
+        temp_dir = dist_dir / "temp_windows"
+        temp_dir.mkdir(exist_ok=True)
+        shutil.copy(exe_file, temp_dir / "jhl-github-desktop.exe")
+
+        # Create README
+        readme = temp_dir / "README.txt"
+        readme.write_text(
+            "JHL GitHub Desktop - Windows\n\n"
+            "Run jhl-github-desktop.exe to start the application.\n\n"
+            "Author: JHL (declue)\n"
+            "Repository: https://github.com/declue/jhl-github-desktop\n"
+        )
+
         shutil.make_archive(
             str(dist_dir / archive_name),
             'zip',
-            app_dir
+            temp_dir
         )
+        shutil.rmtree(temp_dir)
         print(f"[OK] Created {archive_name}.zip")
+
     elif sys.platform == "darwin":
+        # macOS: .app bundle or single executable
         archive_name = "jhl-github-desktop-macos"
-        # For macOS, look for .app bundle
         app_bundle = dist_dir / "JHL GitHub Desktop.app"
+
         if app_bundle.exists():
+            # Archive the .app bundle
             shutil.make_archive(
                 str(dist_dir / archive_name),
                 'zip',
@@ -124,19 +143,59 @@ def create_archive():
                 "JHL GitHub Desktop.app"
             )
         else:
+            # Single executable
+            exe_file = dist_dir / "jhl-github-desktop"
+            if not exe_file.exists():
+                raise Exception(f"Build output not found at {exe_file}")
+
+            temp_dir = dist_dir / "temp_macos"
+            temp_dir.mkdir(exist_ok=True)
+            shutil.copy(exe_file, temp_dir / "jhl-github-desktop")
+
+            readme = temp_dir / "README.txt"
+            readme.write_text(
+                "JHL GitHub Desktop - macOS\n\n"
+                "Run ./jhl-github-desktop to start the application.\n"
+                "You may need to: chmod +x jhl-github-desktop\n\n"
+                "Author: JHL (declue)\n"
+                "Repository: https://github.com/declue/jhl-github-desktop\n"
+            )
+
             shutil.make_archive(
                 str(dist_dir / archive_name),
                 'zip',
-                app_dir
+                temp_dir
             )
+            shutil.rmtree(temp_dir)
+
         print(f"[OK] Created {archive_name}.zip")
+
     else:  # Linux
+        # Linux: Single executable
+        exe_file = dist_dir / "jhl-github-desktop"
+        if not exe_file.exists():
+            raise Exception(f"Build output not found at {exe_file}")
+
         archive_name = "jhl-github-desktop-linux"
+        temp_dir = dist_dir / "temp_linux"
+        temp_dir.mkdir(exist_ok=True)
+        shutil.copy(exe_file, temp_dir / "jhl-github-desktop")
+
+        readme = temp_dir / "README.txt"
+        readme.write_text(
+            "JHL GitHub Desktop - Linux\n\n"
+            "Run ./jhl-github-desktop to start the application.\n"
+            "You may need to: chmod +x jhl-github-desktop\n\n"
+            "Author: JHL (declue)\n"
+            "Repository: https://github.com/declue/jhl-github-desktop\n"
+        )
+
         shutil.make_archive(
             str(dist_dir / archive_name),
             'gztar',
-            app_dir
+            temp_dir
         )
+        shutil.rmtree(temp_dir)
         print(f"[OK] Created {archive_name}.tar.gz")
 
 

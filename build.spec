@@ -29,6 +29,22 @@ hiddenimports = [
 # Collect all app modules
 hiddenimports.extend(collect_submodules('app'))
 
+# Exclude unnecessary modules to reduce size
+excludes = [
+    'matplotlib',
+    'PIL',
+    'numpy',
+    'pandas',
+    'scipy',
+    'pytest',
+    'test',
+    'unittest',
+    'setuptools',
+    'pip',
+    'wheel',
+    'distutils',
+]
+
 # Data files to include
 datas = [
     ('frontend/dist', 'frontend/dist'),
@@ -59,7 +75,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=excludes,
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
@@ -71,13 +87,17 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 exe = EXE(
     pyz,
     a.scripts,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
     [],
-    exclude_binaries=True,
     name='jhl-github-desktop',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
+    strip=True,  # Strip symbols to reduce size
+    upx=True,  # Compress with UPX
+    upx_exclude=[],
+    runtime_tmpdir=None,
     console=False,  # Set to False for GUI app
     disable_windowed_traceback=False,
     argv_emulation=False,
@@ -87,24 +107,13 @@ exe = EXE(
     icon=icon_file,  # Platform-specific icon or None
 )
 
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='jhl-github-desktop',
-)
-
 # For macOS app bundle
 if sys.platform == 'darwin':
     # Use .icns icon if available, otherwise None
     bundle_icon = 'assets/icon.icns' if os.path.exists('assets/icon.icns') else None
 
     app = BUNDLE(
-        coll,
+        exe,
         name='JHL GitHub Desktop.app',
         icon=bundle_icon,
         bundle_identifier='com.jhl.github.desktop',
