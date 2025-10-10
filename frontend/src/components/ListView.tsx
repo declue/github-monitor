@@ -25,7 +25,7 @@ import { Search as SearchIcon, FilterList as FilterListIcon } from '@mui/icons-m
 import type { TreeNode as TreeNodeType } from '../types';
 
 type Order = 'asc' | 'desc';
-type OrderBy = 'path' | 'name' | 'type' | 'status';
+type OrderBy = 'path' | 'name' | 'type' | 'status' | 'updated_at';
 
 interface ColumnFilters {
   path: string[];
@@ -47,6 +47,8 @@ interface FlatNode {
   url?: string;
   metadata: Record<string, any>;
   path: string; // Full path from root
+  updated_at?: string; // Last updated timestamp
+  created_at?: string; // Created timestamp
 }
 
 const getStatusColor = (status?: string) => {
@@ -73,6 +75,30 @@ const getStatusColor = (status?: string) => {
   }
 };
 
+const formatTimestamp = (timestamp?: string): string => {
+  if (!timestamp) return '-';
+
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  // Show relative time for recent items
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  // Show formatted date for older items
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+  });
+};
+
 const flattenTree = (nodes: TreeNodeType[], parentPath = ''): FlatNode[] => {
   const result: FlatNode[] = [];
 
@@ -87,6 +113,8 @@ const flattenTree = (nodes: TreeNodeType[], parentPath = ''): FlatNode[] => {
       url: node.url,
       metadata: node.metadata,
       path,
+      updated_at: node.metadata?.updated_at,
+      created_at: node.metadata?.created_at,
     });
 
     if (node.children && node.children.length > 0) {
@@ -155,8 +183,22 @@ export const ListView: React.FC<ListViewProps> = ({ data, filteredData }) => {
   };
 
   const compareValues = (a: any, b: any, orderBy: OrderBy): number => {
-    const aValue = a[orderBy] || '';
-    const bValue = b[orderBy] || '';
+    let aValue = a[orderBy];
+    let bValue = b[orderBy];
+
+    // Handle timestamp sorting
+    if (orderBy === 'updated_at') {
+      // Convert timestamps to numbers for comparison
+      const aTime = aValue ? new Date(aValue).getTime() : 0;
+      const bTime = bValue ? new Date(bValue).getTime() : 0;
+      if (aTime < bTime) return -1;
+      if (aTime > bTime) return 1;
+      return 0;
+    }
+
+    // Handle empty values
+    if (!aValue) aValue = '';
+    if (!bValue) bValue = '';
 
     if (typeof aValue === 'string' && typeof bValue === 'string') {
       return aValue.localeCompare(bValue);
@@ -404,6 +446,15 @@ export const ListView: React.FC<ListViewProps> = ({ data, filteredData }) => {
                   {renderColumnFilter('status', 'Status')}
                 </Box>
               </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'updated_at'}
+                  direction={orderBy === 'updated_at' ? order : 'desc'}
+                  onClick={() => handleRequestSort('updated_at')}
+                >
+                  Last Updated
+                </TableSortLabel>
+              </TableCell>
               <TableCell>Metadata</TableCell>
               <TableCell>Link</TableCell>
             </TableRow>
@@ -411,7 +462,7 @@ export const ListView: React.FC<ListViewProps> = ({ data, filteredData }) => {
           <TableBody>
             {paginatedData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={7} align="center">
                   <Typography variant="body2" color="text.secondary" sx={{ py: 3 }}>
                     No items to display
                   </Typography>
@@ -439,6 +490,15 @@ export const ListView: React.FC<ListViewProps> = ({ data, filteredData }) => {
                         color={getStatusColor(item.status) as any}
                       />
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      title={item.updated_at || item.created_at || ''}
+                    >
+                      {formatTimestamp(item.updated_at || item.created_at)}
+                    </Typography>
                   </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>

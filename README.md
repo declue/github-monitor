@@ -371,7 +371,12 @@ github-actions-runner-monitor/
     - 고유 값 자동 추출 및 체크박스 스타일 선택
     - 멀티 선택 지원 (여러 값 동시 필터링)
     - 활성 필터는 파란색으로 표시
-  - **컬럼별 정렬**: Path, Name, Type, Status 컬럼을 클릭하여 정렬 (오름차순/내림차순)
+  - **컬럼별 정렬**: Path, Name, Type, Status, Last Updated를 클릭하여 정렬 (오름차순/내림차순)
+  - **타임스탬프 표시**:
+    - Workflow Runs, PRs, Issues의 updated_at/created_at 표시
+    - 상대적 시간 포맷 (1분 이내: "just now", 1시간 이내: "Xm ago", 24시간 이내: "Xh ago", 7일 이내: "Xd ago")
+    - 오래된 항목은 날짜로 표시 (예: "Dec 25", "Jan 15, 2024")
+    - 호버 시 전체 타임스탬프 표시
   - TableSortLabel로 정렬 방향 표시 (화살표 아이콘)
   - Path 정보로 전체 계층 경로 표시
   - 페이지네이션 (10, 25, 50, 100 rows per page)
@@ -482,7 +487,8 @@ MIT License
   - 예: Status 컬럼 필터로 "closed"만 선택 → closed 상태만 표시
   - 활성화된 필터는 파란색 아이콘으로 표시
   - "Clear" 버튼으로 개별 컬럼 필터 제거
-- **컬럼 정렬**: Path, Name, Type, Status 헤더를 클릭하여 오름차순/내림차순 정렬
+- **컬럼 정렬**: Path, Name, Type, Status, Last Updated 헤더를 클릭하여 오름차순/내림차순 정렬
+- **Last Updated 표시**: Workflow Runs, PRs, Issues의 마지막 업데이트 시간을 상대적 시간으로 표시 (예: "2h ago", "3d ago")
 - Path 컬럼에서 전체 계층 구조 확인
 - 페이지네이션으로 많은 데이터를 효율적으로 탐색 (10/25/50/100 rows per page)
 - 리스트 내 검색 필드로 추가 필터링 가능
@@ -498,8 +504,9 @@ MIT License
 - [x] 스마트 캐싱
 - [x] 고급 필터링 및 검색 기능
 - [x] 이중 뷰 (트리뷰 + 리스트뷰)
-- [x] 컬럼별 정렬 (Path, Name, Type, Status)
+- [x] 컬럼별 정렬 (Path, Name, Type, Status, Last Updated)
 - [x] Excel 스타일 컬럼 필터 (개별 컬럼별 값 선택)
+- [x] 타임스탬프 표시 및 정렬 (Workflow Runs, PRs, Issues)
 - [ ] 즐겨찾기 리포지토리
 - [ ] 알림 기능 (워크플로우 실패 시)
 - [ ] 다국어 지원
