@@ -117,11 +117,12 @@ const getStatusColor = (status?: string) => {
 export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, onLoadChildren, onToggleEnabled }) => {
   const [expanded, setExpanded] = useState(level < 2);
   const [loading, setLoading] = useState(false);
-  const [localChildren, setLocalChildren] = useState<TreeNodeType[]>(node.children || []);
   const [isChildrenLoaded, setIsChildrenLoaded] = useState(node.isLoaded || false);
 
-  const hasChildren = (node.hasChildren || localChildren.length > 0) && !loading;
-  const shouldShowChildren = localChildren.length > 0;
+  // Use node.children directly from props to reflect updates
+  const children = node.children || [];
+  const hasChildren = (node.hasChildren || children.length > 0) && !loading;
+  const shouldShowChildren = children.length > 0;
   const isToggleable = node.type === 'organization' || node.type === 'repository';
   const isEnabled = node.enabled !== false; // Default to true if not set
 
@@ -138,8 +139,7 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, on
     if (!isChildrenLoaded && node.hasChildren && onLoadChildren) {
       setLoading(true);
       try {
-        const children = await onLoadChildren(node);
-        setLocalChildren(children);
+        await onLoadChildren(node);
         setIsChildrenLoaded(true);
         setExpanded(true);
       } catch (error) {
@@ -252,7 +252,7 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, on
 
       {shouldShowChildren && (
         <Collapse in={expanded} timeout="auto" unmountOnExit>
-          {localChildren.map((child) => (
+          {children.map((child) => (
             <TreeNodeComponent
               key={child.id}
               node={child}
