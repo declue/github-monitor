@@ -6,7 +6,8 @@ import type { SearchFilterState } from '../components/SearchFilter';
  */
 export const filterTreeNodes = (
   nodes: TreeNode[],
-  filters: SearchFilterState
+  filters: SearchFilterState,
+  parentMatched: boolean = false
 ): TreeNode[] => {
   const { searchText, selectedTypes } = filters;
 
@@ -27,15 +28,28 @@ export const filterTreeNodes = (
       ? selectedTypes.includes(node.type)
       : true;
 
+    const currentNodeMatches = matchesSearch && matchesType;
+
+    // If parent matched, include all children without filtering
+    // This is natural tree search behavior - when parent matches, show all descendants
+    if (parentMatched) {
+      filtered.push({
+        ...node,
+        children: node.children || [],
+      });
+      continue;
+    }
+
     // Filter children recursively
+    // Pass down whether current node matches so children know to include everything
     const filteredChildren = node.children
-      ? filterTreeNodes(node.children, filters)
+      ? filterTreeNodes(node.children, filters, currentNodeMatches)
       : [];
 
     // Include this node if:
     // 1. It matches the filters itself, OR
-    // 2. Any of its children match
-    if ((matchesSearch && matchesType) || filteredChildren.length > 0) {
+    // 2. Any of its children match (to show the path to matching children)
+    if (currentNodeMatches || filteredChildren.length > 0) {
       filtered.push({
         ...node,
         children: filteredChildren,
