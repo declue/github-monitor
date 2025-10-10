@@ -40,7 +40,6 @@ export const filterTreeNodes = (
 
     // If parent matched, include all children without filtering
     // This is natural tree search behavior - when parent matches, show all descendants
-    // But still respect the enabled status
     if (parentMatched) {
       filtered.push({
         ...node,
@@ -49,44 +48,19 @@ export const filterTreeNodes = (
       continue;
     }
 
-    const isRepository = node.type === 'repository';
+    // Recursively filter children
+    const filteredChildren = node.children
+      ? filterTreeNodes(node.children, filters, currentNodeMatches)
+      : [];
 
-    // For repositories: if checked, show them even if no search match
-    // For organizations: always show if they have enabled repos
-    if (isRepository) {
-      // If repo matches search OR it's just enabled and we want to show it
-      if (currentNodeMatches) {
-        // Repo matches - show all its children
-        filtered.push({
-          ...node,
-          children: node.children || [],
-        });
-      } else if (searchText || selectedTypes.length > 0) {
-        // There's a search but repo doesn't match - don't show it
-        continue;
-      } else {
-        // No search filter - show enabled repo with its children
-        filtered.push({
-          ...node,
-          children: node.children || [],
-        });
-      }
-    } else {
-      // For other nodes (org, workflows, runners, etc.)
-      // Filter children recursively
-      const filteredChildren = node.children
-        ? filterTreeNodes(node.children, filters, currentNodeMatches)
-        : [];
-
-      // Include this node if:
-      // 1. It matches the filters itself, OR
-      // 2. Any of its children match (to show the path to matching children)
-      if (currentNodeMatches || filteredChildren.length > 0) {
-        filtered.push({
-          ...node,
-          children: filteredChildren,
-        });
-      }
+    // Include this node if:
+    // 1. It matches the filters itself, OR
+    // 2. Any of its children match (to show the path to matching children)
+    if (currentNodeMatches || filteredChildren.length > 0) {
+      filtered.push({
+        ...node,
+        children: currentNodeMatches ? (node.children || []) : filteredChildren,
+      });
     }
   }
 
