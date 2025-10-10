@@ -250,7 +250,7 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, on
         )}
       </Box>
 
-      {shouldShowChildren && (
+      {shouldShowChildren && isEnabled && (
         <Collapse in={expanded} timeout="auto" unmountOnExit>
           {children.map((child) => (
             <TreeNodeComponent
