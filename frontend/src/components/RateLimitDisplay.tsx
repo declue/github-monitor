@@ -1,6 +1,6 @@
 import { Box, Typography, LinearProgress, Tooltip, Chip } from '@mui/material';
 import { Api, Timer } from '@mui/icons-material';
-import { RateLimitInfo } from '../types';
+import type { RateLimitInfo } from '../types';
 
 interface RateLimitDisplayProps {
   rateLimit: RateLimitInfo | null;

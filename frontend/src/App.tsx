@@ -19,7 +19,7 @@ import { TreeView } from './components/TreeView';
 import { RateLimitDisplay } from './components/RateLimitDisplay';
 import { SettingsDialog } from './components/SettingsDialog';
 import { fetchTree, fetchRateLimit } from './api';
-import { TreeNode, RateLimitInfo } from './types';
+import type { TreeNode, RateLimitInfo } from './types';
 import { loadSettings, saveSettings } from './utils/storage';
 
 const darkTheme = createTheme({

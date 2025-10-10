@@ -24,7 +24,7 @@ import {
   HourglassEmpty,
   AccountTree,
 } from '@mui/icons-material';
-import { TreeNode as TreeNodeType } from '../types';
+import type { TreeNode as TreeNodeType } from '../types';
 
 interface TreeNodeProps {
   node: TreeNodeType;
