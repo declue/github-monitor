@@ -2,39 +2,31 @@
 
 import os
 import sys
-from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules, collect_all
 
 block_cipher = None
 
-# Collect all FastAPI and related dependencies
-hiddenimports = [
-    'uvicorn',
-    'uvicorn.logging',
-    'uvicorn.loops',
-    'uvicorn.loops.auto',
-    'uvicorn.protocols',
-    'uvicorn.protocols.http',
-    'uvicorn.protocols.http.auto',
-    'uvicorn.protocols.websockets',
-    'uvicorn.protocols.websockets.auto',
-    'uvicorn.lifespan',
-    'uvicorn.lifespan.on',
-    'fastapi',
-    'fastapi.staticfiles',
-    'fastapi.responses',
-    'fastapi.middleware',
-    'fastapi.middleware.cors',
-    'httpx',
-    'pydantic',
-    'pydantic_core',
-    'starlette',
-    'starlette.staticfiles',
-    'starlette.responses',
-    'starlette.middleware',
-    'starlette.middleware.cors',
-    'pyloid',
+# Collect all hiddenimports
+hiddenimports = []
+
+# Pyloid dependencies
+datas_pyloid, binaries_pyloid, hiddenimports_pyloid = collect_all('pyloid')
+hiddenimports += hiddenimports_pyloid
+
+# FastAPI and Uvicorn
+for module in ['uvicorn', 'fastapi', 'starlette', 'pydantic', 'pydantic_settings', 'httpx']:
+    try:
+        _, _, hidden = collect_all(module)
+        hiddenimports += hidden
+    except:
+        pass
+
+# Additional required modules
+hiddenimports += [
     'anyio',
     'sniffio',
+    'email_validator',
+    'python_multipart',
 ]
 
 # Collect all app modules
@@ -62,8 +54,8 @@ datas = [
     ('backend/app', 'app'),
 ]
 
-# Add any additional data files from dependencies
-datas += collect_data_files('pyloid')
+# Add Pyloid data files
+datas += datas_pyloid
 
 # Determine icon file based on platform
 icon_file = None
@@ -78,9 +70,9 @@ elif sys.platform == 'darwin':
 # Linux doesn't need icon file for PyInstaller
 
 a = Analysis(
-    ['pyloid_main.py'],
+    ['src-pyloid/main.py'],
     pathex=[],
-    binaries=[],
+    binaries=binaries_pyloid,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
