@@ -6,6 +6,7 @@ import {
   Link,
   Collapse,
   CircularProgress,
+  Checkbox,
 } from '@mui/material';
 import {
   ChevronRight,
@@ -30,6 +31,7 @@ interface TreeNodeProps {
   node: TreeNodeType;
   level?: number;
   onLoadChildren?: (node: TreeNodeType) => Promise<TreeNodeType[]>;
+  onToggleEnabled?: (nodeId: string, enabled: boolean) => void;
 }
 
 const getNodeIcon = (type: string, expanded: boolean) => {
@@ -112,7 +114,7 @@ const getStatusColor = (status?: string) => {
   }
 };
 
-export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, onLoadChildren }) => {
+export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, onLoadChildren, onToggleEnabled }) => {
   const [expanded, setExpanded] = useState(level < 2);
   const [loading, setLoading] = useState(false);
   const [localChildren, setLocalChildren] = useState<TreeNodeType[]>(node.children || []);
@@ -120,6 +122,8 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, on
 
   const hasChildren = (node.hasChildren || localChildren.length > 0) && !loading;
   const shouldShowChildren = localChildren.length > 0;
+  const isToggleable = node.type === 'organization' || node.type === 'repository';
+  const isEnabled = node.enabled !== false; // Default to true if not set
 
   const handleToggle = async () => {
     if (!hasChildren && !node.hasChildren) return;
@@ -148,6 +152,13 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, on
     }
   };
 
+  const handleCheckboxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    event.stopPropagation();
+    if (onToggleEnabled) {
+      onToggleEnabled(node.id, event.target.checked);
+    }
+  };
+
   return (
     <Box>
       <Box
@@ -162,9 +173,20 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, on
             borderRadius: 1,
           },
           cursor: hasChildren ? 'pointer' : 'default',
+          opacity: isToggleable && !isEnabled ? 0.5 : 1,
         }}
         onClick={handleToggle}
       >
+        {isToggleable && (
+          <Checkbox
+            size="small"
+            checked={isEnabled}
+            onChange={handleCheckboxChange}
+            onClick={(e) => e.stopPropagation()}
+            sx={{ mr: 0.5, p: 0 }}
+          />
+        )}
+
         {(hasChildren || node.hasChildren) && (
           <Box sx={{ mr: 0.5, display: 'flex', alignItems: 'center', width: 28 }}>
             {loading ? (
@@ -231,7 +253,13 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, on
       {shouldShowChildren && (
         <Collapse in={expanded} timeout="auto" unmountOnExit>
           {localChildren.map((child) => (
-            <TreeNodeComponent key={child.id} node={child} level={level + 1} onLoadChildren={onLoadChildren} />
+            <TreeNodeComponent
+              key={child.id}
+              node={child}
+              level={level + 1}
+              onLoadChildren={onLoadChildren}
+              onToggleEnabled={onToggleEnabled}
+            />
           ))}
         </Collapse>
       )}
@@ -242,13 +270,19 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, on
 interface TreeViewProps {
   data: TreeNodeType[];
   onLoadChildren?: (node: TreeNodeType) => Promise<TreeNodeType[]>;
+  onToggleEnabled?: (nodeId: string, enabled: boolean) => void;
 }
 
-export const TreeView: React.FC<TreeViewProps> = ({ data, onLoadChildren }) => {
+export const TreeView: React.FC<TreeViewProps> = ({ data, onLoadChildren, onToggleEnabled }) => {
   return (
     <Box sx={{ width: '100%' }}>
       {data.map((node) => (
-        <TreeNodeComponent key={node.id} node={node} onLoadChildren={onLoadChildren} />
+        <TreeNodeComponent
+          key={node.id}
+          node={node}
+          onLoadChildren={onLoadChildren}
+          onToggleEnabled={onToggleEnabled}
+        />
       ))}
     </Box>
   );

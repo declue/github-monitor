@@ -90,8 +90,18 @@ function App() {
         fetchRateLimit(token, githubApiUrl),
       ]);
 
-      setTreeData(tree);
-      setFilteredTreeData(tree); // Initialize filtered data
+      // Initialize all orgs and repos as enabled by default
+      const treeWithEnabled = tree.map(org => ({
+        ...org,
+        enabled: true,
+        children: org.children.map(repo => ({
+          ...repo,
+          enabled: true,
+        })),
+      }));
+
+      setTreeData(treeWithEnabled);
+      setFilteredTreeData(treeWithEnabled); // Initialize filtered data
       setRateLimit(rate);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -108,14 +118,35 @@ function App() {
     const needsDeepSearch = selectedTypes.length > 0 || searchText.trim().length > 0;
 
     if (needsDeepSearch) {
-      // Auto-expand all repositories to load their children for filtering
-      const expandedData = await expandAllRepositories(treeData);
+      // Only expand enabled repositories to avoid unnecessary API calls
+      const expandedData = await expandAllRepositories(treeData, true); // Pass true to only expand enabled
       const filtered = filterTreeNodes(expandedData, newFilters);
       setFilteredTreeData(filtered);
     } else {
       // No filters, just show original data
       setFilteredTreeData(treeData);
     }
+  }, [treeData]);
+
+  const handleToggleEnabled = useCallback((nodeId: string, enabled: boolean) => {
+    const updateNodeEnabled = (nodes: TreeNode[]): TreeNode[] => {
+      return nodes.map(node => {
+        if (node.id === nodeId) {
+          return { ...node, enabled };
+        }
+        if (node.children && node.children.length > 0) {
+          return {
+            ...node,
+            children: updateNodeEnabled(node.children),
+          };
+        }
+        return node;
+      });
+    };
+
+    const updatedTree = updateNodeEnabled(treeData);
+    setTreeData(updatedTree);
+    setFilteredTreeData(updatedTree);
   }, [treeData]);
 
   const handleSaveSettings = (newToken: string, newOrgs: string[], newGithubApiUrl: string) => {
@@ -159,21 +190,31 @@ function App() {
     }
   }, [token, githubApiUrl]);
 
-  const expandAllRepositories = useCallback(async (nodes: TreeNode[]): Promise<TreeNode[]> => {
+  const expandAllRepositories = useCallback(async (nodes: TreeNode[], onlyEnabled: boolean = false): Promise<TreeNode[]> => {
     const expandedNodes: TreeNode[] = [];
 
     for (const node of nodes) {
+      // Skip disabled nodes if onlyEnabled is true
+      if (onlyEnabled && node.enabled === false) {
+        expandedNodes.push(node);
+        continue;
+      }
+
       if (node.type === 'repository' && !node.isLoaded && node.hasChildren) {
-        // Load repository details
-        const children = await handleLoadChildren(node);
-        expandedNodes.push({
-          ...node,
-          children,
-          isLoaded: true,
-        });
+        // Load repository details only if enabled (or if we're not filtering by enabled status)
+        if (!onlyEnabled || node.enabled !== false) {
+          const children = await handleLoadChildren(node);
+          expandedNodes.push({
+            ...node,
+            children,
+            isLoaded: true,
+          });
+        } else {
+          expandedNodes.push(node);
+        }
       } else if (node.children && node.children.length > 0) {
         // Recursively expand children
-        const expandedChildren = await expandAllRepositories(node.children);
+        const expandedChildren = await expandAllRepositories(node.children, onlyEnabled);
         expandedNodes.push({
           ...node,
           children: expandedChildren,
@@ -329,7 +370,11 @@ function App() {
                       Tree View ({countTreeNodes(filteredTreeData)} items)
                     </Typography>
                   </Box>
-                  <TreeView data={filteredTreeData} onLoadChildren={handleLoadChildren} />
+                  <TreeView
+                    data={filteredTreeData}
+                    onLoadChildren={handleLoadChildren}
+                    onToggleEnabled={handleToggleEnabled}
+                  />
                 </Paper>
 
                 {/* Right side: List View */}

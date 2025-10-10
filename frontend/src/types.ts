@@ -8,6 +8,7 @@ export interface TreeNode {
   metadata: Record<string, any>;
   hasChildren?: boolean;  // Indicates if node has children to load
   isLoaded?: boolean;     // Indicates if children are already loaded
+  enabled?: boolean;      // Indicates if this node is enabled for searching (only for org/repo)
 }
 
 export interface RateLimitInfo {
