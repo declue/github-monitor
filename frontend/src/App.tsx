@@ -18,9 +18,12 @@ import { Refresh, GitHub, Settings as SettingsIcon } from '@mui/icons-material';
 import { TreeView } from './components/TreeView';
 import { RateLimitDisplay } from './components/RateLimitDisplay';
 import { SettingsDialog } from './components/SettingsDialog';
+import { SearchFilter, type SearchFilterState } from './components/SearchFilter';
+import { ListView } from './components/ListView';
 import { fetchTree, fetchRateLimit, fetchRepoDetails } from './api';
 import type { TreeNode, RateLimitInfo } from './types';
 import { loadSettings, saveSettings } from './utils/storage';
+import { filterTreeNodes, countTreeNodes } from './utils/filterTree';
 
 const darkTheme = createTheme({
   palette: {
@@ -52,6 +55,7 @@ const darkTheme = createTheme({
 
 function App() {
   const [treeData, setTreeData] = useState<TreeNode[]>([]);
+  const [filteredTreeData, setFilteredTreeData] = useState<TreeNode[]>([]);
   const [rateLimit, setRateLimit] = useState<RateLimitInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +85,7 @@ function App() {
       ]);
 
       setTreeData(tree);
+      setFilteredTreeData(tree); // Initialize filtered data
       setRateLimit(rate);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -89,6 +94,11 @@ function App() {
       setLoading(false);
     }
   };
+
+  const handleFilterChange = useCallback((newFilters: SearchFilterState) => {
+    const filtered = filterTreeNodes(treeData, newFilters);
+    setFilteredTreeData(filtered);
+  }, [treeData]);
 
   const handleSaveSettings = (newToken: string, newOrgs: string[], newGithubApiUrl: string) => {
     setToken(newToken);
@@ -195,7 +205,7 @@ function App() {
           </Toolbar>
         </AppBar>
 
-        <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flexGrow: 1 }}>
+        <Container maxWidth={false} sx={{ mt: 4, mb: 4, flexGrow: 1, px: 3 }}>
           {loading && (
             <Box
               sx={{
@@ -236,17 +246,35 @@ function App() {
           )}
 
           {!loading && !error && treeData.length > 0 && (
-            <Paper
-              elevation={2}
-              sx={{
-                p: 2,
-                minHeight: 400,
-                bgcolor: 'background.paper',
-                borderRadius: 2,
-              }}
-            >
-              <TreeView data={treeData} onLoadChildren={handleLoadChildren} />
-            </Paper>
+            <>
+              <SearchFilter onFilterChange={handleFilterChange} />
+
+              <Box sx={{ display: 'flex', gap: 2, height: 'calc(100vh - 280px)' }}>
+                {/* Left side: Tree View */}
+                <Paper
+                  elevation={2}
+                  sx={{
+                    flex: '0 0 40%',
+                    p: 2,
+                    overflow: 'auto',
+                    bgcolor: 'background.paper',
+                    borderRadius: 2,
+                  }}
+                >
+                  <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h6">
+                      Tree View ({countTreeNodes(filteredTreeData)} items)
+                    </Typography>
+                  </Box>
+                  <TreeView data={filteredTreeData} onLoadChildren={handleLoadChildren} />
+                </Paper>
+
+                {/* Right side: List View */}
+                <Box sx={{ flex: '1 1 60%' }}>
+                  <ListView data={treeData} filteredData={filteredTreeData} />
+                </Box>
+              </Box>
+            </>
           )}
         </Container>
 
