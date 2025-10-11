@@ -1,10 +1,13 @@
 import axios from 'axios';
 import type { TreeNode, RateLimitInfo } from './types';
+import { baseAPI } from 'pyloid-js';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const rpcUrl = await baseAPI.getServerUrl();
+
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: rpcUrl,
 });
 
 export const fetchTree = async (orgs?: string[], token?: string, githubApiUrl?: string): Promise<TreeNode[]> => {

@@ -46,7 +46,7 @@ import type { TreeNode, RateLimitInfo } from './types';
 import { loadSettings, loadSettingsSync, saveSettings } from './utils/storage';
 import { filterTreeNodes, countTreeNodes, filterEnabledNodes } from './utils/filterTree';
 import { getVersionInfo, ENVIRONMENT } from './config/version';
-import { getEnabledRepos, updateEnabledRepos, getConfig } from './api/config';
+import { getEnabledRepos, updateEnabledRepos, getConfig, updateUIConfig } from './api/config';
 
 const darkTheme = createTheme({
   palette: {
@@ -814,6 +814,36 @@ function App() {
       };
     }
   }, [token, githubApiUrl, notificationRefreshInterval, showNotifications, checkNotifications]);
+
+  // Auto-save window size on resize
+  useEffect(() => {
+    let resizeTimeout: NodeJS.Timeout;
+
+    const handleResize = () => {
+      // Debounce: wait 1 second after resize stops before saving
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+
+        console.log(`Window resized: ${width}x${height}, saving...`);
+
+        // Save to backend
+        updateUIConfig({
+          window_size: { width, height }
+        }).catch(error => {
+          console.error('Failed to save window size:', error);
+        });
+      }, 1000);
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(resizeTimeout);
+    };
+  }, []);
 
   return (
     <ThemeProvider theme={darkTheme}>

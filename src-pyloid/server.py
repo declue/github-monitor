@@ -20,7 +20,6 @@ app = FastAPI(
 
 def start(host: str, port: int):
     import uvicorn
-    # Use fixed port 8000 for development
     uvicorn.run(app, host=host, port=port)
 
 def setup_cors():
@@ -438,21 +437,32 @@ class GitHubConfigUpdate(PydanticBaseModel):
 @app.post("/api/config/github")
 async def update_github_config(config_update: GitHubConfigUpdate):
     """Update GitHub configuration"""
-    config_manager = get_config_manager()
+    try:
+        config_manager = get_config_manager()
 
-    if config_update.token is not None:
-        config_manager.update_github_token(config_update.token)
-    if config_update.api_url is not None:
-        config_manager.update_github_api_url(config_update.api_url)
-    if config_update.organization is not None:
-        config_manager.update_github_organization(config_update.organization)
+        print(f"Updating GitHub config: token={'***' if config_update.token else None}, api_url={config_update.api_url}, org={config_update.organization}")
+        print(f"Config file path: {config_manager.config_file_path}")
+        print(f"Config directory: {config_manager.config_directory}")
 
-    # Reload settings to apply changes
-    from config import load_settings
-    global settings
-    settings = load_settings()
+        if config_update.token is not None:
+            config_manager.update_github_token(config_update.token)
+        if config_update.api_url is not None:
+            config_manager.update_github_api_url(config_update.api_url)
+        if config_update.organization is not None:
+            config_manager.update_github_organization(config_update.organization)
 
-    return {"status": "updated", "config": config_manager.get_config().github}
+        # Reload settings to apply changes
+        from config import load_settings
+        global settings
+        settings = load_settings()
+
+        print("GitHub config updated successfully")
+        return {"status": "updated", "config": config_manager.get_config().github}
+    except Exception as e:
+        print(f"Error updating GitHub config: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to update configuration: {type(e).__name__}: {str(e)}")
 
 
 @app.get("/api/config/watched-repos", response_model=List[WatchedRepo])

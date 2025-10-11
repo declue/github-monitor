@@ -3,7 +3,17 @@
  * Manages settings in home directory via backend API
  */
 
-const API_BASE_URL = 'http://localhost:8000';
+import { baseAPI } from 'pyloid-js';
+
+// Get the server URL dynamically
+const getApiBaseUrl = async () => {
+  try {
+    return await baseAPI.getServerUrl();
+  } catch (error) {
+    console.error('Failed to get server URL, using empty string:', error);
+    return '';
+  }
+};
 
 export interface AppConfig {
   github: {
@@ -37,7 +47,8 @@ export interface AppConfig {
  */
 export async function getConfiguration(): Promise<AppConfig> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/config`);
+    const baseUrl = await getApiBaseUrl();
+    const response = await fetch(`${baseUrl}/api/config`);
     if (!response.ok) {
       throw new Error('Failed to load configuration');
     }
@@ -73,7 +84,8 @@ export async function updateGitHubConfig(
   apiUrl?: string,
   organization?: string
 ): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/config/github`, {
+  const baseUrl = await getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/api/config/github`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -94,7 +106,8 @@ export async function updateGitHubConfig(
  * Get watched repositories
  */
 export async function getWatchedRepos() {
-  const response = await fetch(`${API_BASE_URL}/api/config/watched-repos`);
+  const baseUrl = await getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/api/config/watched-repos`);
   if (!response.ok) {
     throw new Error('Failed to load watched repositories');
   }
@@ -105,7 +118,8 @@ export async function getWatchedRepos() {
  * Add a repository to watch list
  */
 export async function addWatchedRepo(owner: string, repo: string, notifications = true) {
-  const response = await fetch(`${API_BASE_URL}/api/config/watched-repos`, {
+  const baseUrl = await getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/api/config/watched-repos`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -126,8 +140,9 @@ export async function addWatchedRepo(owner: string, repo: string, notifications 
  * Remove a repository from watch list
  */
 export async function removeWatchedRepo(owner: string, repo: string) {
+  const baseUrl = await getApiBaseUrl();
   const response = await fetch(
-    `${API_BASE_URL}/api/config/watched-repos/${owner}/${repo}`,
+    `${baseUrl}/api/config/watched-repos/${owner}/${repo}`,
     {
       method: 'DELETE',
     }
@@ -147,7 +162,8 @@ export async function updateUIConfig(config: {
   window_size?: { width: number; height: number };
   window_position?: { x: number; y: number };
 }) {
-  const response = await fetch(`${API_BASE_URL}/api/config/ui`, {
+  const baseUrl = await getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/api/config/ui`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -164,7 +180,8 @@ export async function updateUIConfig(config: {
  * Reset configuration to defaults
  */
 export async function resetConfiguration() {
-  const response = await fetch(`${API_BASE_URL}/api/config/reset`, {
+  const baseUrl = await getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/api/config/reset`, {
     method: 'POST',
   });
 
@@ -177,7 +194,8 @@ export async function resetConfiguration() {
  * Get configuration file path
  */
 export async function getConfigPath(): Promise<{ config_file: string; config_directory: string }> {
-  const response = await fetch(`${API_BASE_URL}/api/config/path`);
+  const baseUrl = await getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/api/config/path`);
   if (!response.ok) {
     throw new Error('Failed to get configuration path');
   }
@@ -188,7 +206,8 @@ export async function getConfigPath(): Promise<{ config_file: string; config_dir
  * Get enabled/disabled repositories
  */
 export async function getEnabledRepos(): Promise<Array<{ node_id: string; enabled: boolean }>> {
-  const response = await fetch(`${API_BASE_URL}/api/config/enabled-repos`);
+  const baseUrl = await getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/api/config/enabled-repos`);
   if (!response.ok) {
     throw new Error('Failed to get enabled repositories');
   }
@@ -199,7 +218,8 @@ export async function getEnabledRepos(): Promise<Array<{ node_id: string; enable
  * Update enabled/disabled repositories
  */
 export async function updateEnabledRepos(enabledRepos: Array<{ node_id: string; enabled: boolean }>) {
-  const response = await fetch(`${API_BASE_URL}/api/config/enabled-repos`, {
+  const baseUrl = await getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/api/config/enabled-repos`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

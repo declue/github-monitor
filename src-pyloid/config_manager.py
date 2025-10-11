@@ -118,8 +118,24 @@ class ConfigManager:
         if not self._config:
             self._config = AppConfig()
 
-        with open(self._config_file, 'w', encoding='utf-8') as f:
-            json.dump(self._config.dict(), f, indent=2, ensure_ascii=False)
+        try:
+            # Ensure directory exists before writing
+            self._ensure_config_directory()
+
+            # Try to write the config file
+            with open(self._config_file, 'w', encoding='utf-8') as f:
+                json.dump(self._config.model_dump(), f, indent=2, ensure_ascii=False)
+
+            print(f"Configuration saved successfully to {self._config_file}")
+        except PermissionError as e:
+            print(f"Permission denied when writing to {self._config_file}: {e}")
+            raise RuntimeError(f"No write permission for config file: {self._config_file}") from e
+        except OSError as e:
+            print(f"OS error when writing to {self._config_file}: {e}")
+            raise RuntimeError(f"Failed to write config file: {self._config_file}") from e
+        except Exception as e:
+            print(f"Unexpected error when saving config: {type(e).__name__}: {e}")
+            raise
 
     def get_config(self) -> AppConfig:
         """Get current configuration
@@ -267,7 +283,7 @@ class ConfigManager:
         """
         config = self.get_config()
         with open(export_path, 'w', encoding='utf-8') as f:
-            json.dump(config.dict(), f, indent=2, ensure_ascii=False)
+            json.dump(config.model_dump(), f, indent=2, ensure_ascii=False)
 
     def import_config(self, import_path: str):
         """Import configuration from a file

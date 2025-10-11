@@ -139,13 +139,15 @@ export const SearchFilter: React.FC<SearchFilterProps> = ({ onFilterChange }) =>
           <CircularProgress size={24} />
         ) : (
           <Tooltip title="Clear filters">
-            <IconButton
-              onClick={handleClear}
-              disabled={!searchText && selectedTypes.length === 0}
-              color="primary"
-            >
-              <ClearIcon />
-            </IconButton>
+            <span>
+              <IconButton
+                onClick={handleClear}
+                disabled={!searchText && selectedTypes.length === 0}
+                color="primary"
+              >
+                <ClearIcon />
+              </IconButton>
+            </span>
           </Tooltip>
         )}
       </Box>

@@ -185,17 +185,19 @@ export const NotificationsList: React.FC<NotificationsListProps> = ({
       width: 70,
       renderCell: (params: GridRenderCellParams) => (
         <Tooltip title={params.value ? '읽지 않음' : '읽음'}>
-          <IconButton
-            size="small"
-            onClick={() => params.value && handleMarkAsRead(params.row.id)}
-            disabled={!params.value}
-          >
-            {params.value ? (
-              <Circle sx={{ fontSize: 12, color: 'primary.main' }} />
-            ) : (
-              <CheckCircle sx={{ fontSize: 12, color: 'text.disabled' }} />
-            )}
-          </IconButton>
+          <span>
+            <IconButton
+              size="small"
+              onClick={() => params.value && handleMarkAsRead(params.row.id)}
+              disabled={!params.value}
+            >
+              {params.value ? (
+                <Circle sx={{ fontSize: 12, color: 'primary.main' }} />
+              ) : (
+                <CheckCircle sx={{ fontSize: 12, color: 'text.disabled' }} />
+              )}
+            </IconButton>
+          </span>
         </Tooltip>
       ),
     },
