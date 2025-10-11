@@ -9,7 +9,7 @@ from pyloid.serve import pyloid_serve
 from pyloid import Pyloid
 from server import adapter
 
-app = Pyloid(app_name="GitHub Desktop Clone", single_instance=True, server=adapter)
+app = Pyloid(app_name="JHL GitHub Desktop", single_instance=True, server=adapter)
 
 app.set_icon(get_production_path("src-pyloid/icons/icon.png"))
 app.set_tray_icon(get_production_path("src-pyloid/icons/icon.png"))
@@ -35,12 +35,12 @@ app.set_tray_menu_items(
 if is_production():
     url = pyloid_serve(directory=get_production_path("dist-front"))
     window = app.create_window(
-        title="GitHub Desktop Clone - Production",
+        title="JHL GitHub Desktop - Production",
     )
     window.load_url(url)
 else:
     window = app.create_window(
-        title="GitHub Desktop Clone - Dev",
+        title="JHL GitHub Desktop - Dev",
         dev_tools=True,
     )
     window.load_url("http://localhost:5173")

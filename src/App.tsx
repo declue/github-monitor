@@ -386,7 +386,7 @@ function App() {
           <Toolbar variant="dense">
             <GitHub sx={{ mr: 2 }} />
             <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-              GitHub Actions Runner Monitor
+              JHL GitHub Desktop
             </Typography>
 
             {!isProduction && (
@@ -569,7 +569,7 @@ function App() {
                   Commits
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-                  Commits feature coming soon. View commit history and changes across repositories.
+                  선택된 Repository에 대해 Commit 현황을 확인하고 AI Agent를 이용하여 Commit을 할 수 있습니다.
                 </Typography>
               </Box>
             </TabPanel>
@@ -582,7 +582,7 @@ function App() {
                   Actions
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-                  Actions feature coming soon. Monitor GitHub Actions workflows and runners.
+                  선택된 Repository에 대해 GitHub Actions 현황을 확인하고 AI Agent를 이용하여 Actions Run 을 분석할 수 있습니다. 
                 </Typography>
               </Box>
             </TabPanel>
@@ -595,7 +595,7 @@ function App() {
                   Analytics
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-                  Analytics feature coming soon. Analyze repository metrics and trends.
+                  선택된 Repository에 대해 메인 컨트리뷰터별 PR, Commit, 리뷰 횟수를 모니터링하며 SE 관점에서 GitHub 활동을 분석할 수 있습니다.
                 </Typography>
               </Box>
             </TabPanel>
@@ -614,7 +614,7 @@ function App() {
           }}
         >
           <Typography variant="body2" color="text.secondary">
-            GitHub Actions Runner Monitor v{versionInfo.version} - Monitor your development status at a glance
+            JHL GitHub Desktop v{versionInfo.version} - Monitor your development status at a glance
           </Typography>
           {isDevelopment && (
             <Typography variant="caption" color="warning.main" display="block" sx={{ mt: 0.5 }}>

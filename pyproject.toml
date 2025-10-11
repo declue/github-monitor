@@ -2,7 +2,7 @@
 name = "github-desktop-clone"
 version = "1.0.0"
 readme = "README.md"
-description = "GitHub Desktop Clone - Built with Pyloid"
+description = "JHL GitHub Desktop"
 
 requires-python = ">=3.9"
 

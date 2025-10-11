@@ -20,7 +20,7 @@ if sys.platform == 'win32':
 def test_config_manager():
     """Test configuration management functionality"""
     print("=" * 60)
-    print("GitHub Desktop Clone Configuration Test")
+    print("JHL GitHub Desktop Configuration Test")
     print("=" * 60)
 
     # Get config manager

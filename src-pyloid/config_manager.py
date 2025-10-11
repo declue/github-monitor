@@ -1,5 +1,5 @@
 """
-Configuration manager for GitHub Desktop Clone
+Configuration manager for JHL GitHub Desktop
 Manages user settings in ~/.config/jhl-github-desktop/
 """
 

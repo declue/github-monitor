@@ -37,7 +37,8 @@ export const loadSettings = async (): Promise<Settings | null> => {
     // Try to load from backend first
     const config = await getConfiguration();
 
-    if (config.github.token) {
+    // Check if config has github property (not just if token exists)
+    if (config && config.github) {
       // Convert backend format to frontend format
       const settings: Settings = {
         token: config.github.token || '',

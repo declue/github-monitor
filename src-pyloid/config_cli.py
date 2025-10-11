@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-CLI tool for managing GitHub Desktop Clone configuration
+CLI tool for managing JHL GitHub Desktop configuration
 """
 
 import argparse
@@ -21,7 +21,7 @@ if sys.platform == 'win32':
 
 def main():
     parser = argparse.ArgumentParser(
-        description="GitHub Desktop Clone Configuration Manager"
+        description="JHL GitHub Desktop Configuration Manager"
     )
 
     subparsers = parser.add_subparsers(dest='command', help='Commands')
