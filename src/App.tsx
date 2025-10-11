@@ -101,6 +101,7 @@ function App() {
   const [loadingProgress, setLoadingProgress] = useState({ current: 0, total: 0 });
   const [warningDialogOpen, setWarningDialogOpen] = useState(false);
   const [pendingDetailLoad, setPendingDetailLoad] = useState<() => void>(() => () => {});
+  const [selectedRepository, setSelectedRepository] = useState<TreeNode | null>(null);
 
   // Notifications state
   const [showNotifications, setShowNotifications] = useState(false);
@@ -574,6 +575,16 @@ function App() {
   const handleRateLimitUpdate = (newRateLimit: RateLimitInfo) => {
     setRateLimit(newRateLimit);
   };
+
+  // Handle node selection in TreeView
+  const handleNodeClick = useCallback((node: TreeNode) => {
+    console.log('Node clicked:', node.name, node.type);
+    // Only handle repository nodes
+    if (node.type === 'repository') {
+      setSelectedRepository(node);
+      console.log('Selected repository:', node.name, 'with', node.children?.length || 0, 'children');
+    }
+  }, []);
 
   // Load children for a single node (used by TreeView expansion)
   const handleLoadChildren = useCallback(async (node: TreeNode): Promise<TreeNode[]> => {
@@ -1062,25 +1073,35 @@ function App() {
                         minWidth: 250,
                         maxWidth: 500,
                         p: 1,
-                        overflow: 'auto',
                         bgcolor: 'background.paper',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden',
                       }}
                     >
-                      <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
                           Tree View ({countTreeNodes(filteredTreeData)} items)
                         </Typography>
                       </Box>
-                      <TreeView
-                        data={filteredTreeData}
-                        onLoadChildren={handleLoadChildren}
-                        onToggleEnabled={handleToggleEnabled}
-                      />
+                      <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+                        <TreeView
+                          data={filteredTreeData}
+                          onLoadChildren={handleLoadChildren}
+                          onToggleEnabled={handleToggleEnabled}
+                          onNodeClick={handleNodeClick}
+                          selectedNodeId={selectedRepository?.id}
+                        />
+                      </Box>
                     </Paper>
 
                     {/* Right side: List View */}
                     <Box sx={{ flex: '1 1 65%', overflow: 'hidden' }}>
-                      <ListView data={treeData} filteredData={filterEnabledNodes(filteredTreeData)} />
+                      <ListView
+                        data={treeData}
+                        filteredData={filterEnabledNodes(filteredTreeData)}
+                        selectedRepository={selectedRepository}
+                      />
                     </Box>
                   </Box>
                 </Box>

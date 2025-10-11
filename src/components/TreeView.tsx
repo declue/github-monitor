@@ -32,6 +32,8 @@ interface TreeNodeProps {
   level?: number;
   onLoadChildren?: (node: TreeNodeType) => Promise<TreeNodeType[]>;
   onToggleEnabled?: (nodeId: string, enabled: boolean) => void;
+  onNodeClick?: (node: TreeNodeType) => void;
+  selectedNodeId?: string;
 }
 
 const getNodeIcon = (type: string, expanded: boolean) => {
@@ -114,7 +116,7 @@ const getStatusColor = (status?: string) => {
   }
 };
 
-export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, onLoadChildren, onToggleEnabled }) => {
+export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, onLoadChildren, onToggleEnabled, onNodeClick, selectedNodeId }) => {
   const [expanded, setExpanded] = useState(level < 2);
   const [loading, setLoading] = useState(false);
 
@@ -127,6 +129,7 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, on
   const isToggleable = node.type === 'organization' || node.type === 'repository';
   const isEnabled = node.enabled !== false; // Default to true if not set
   const isOrganization = node.type === 'organization';
+  const isSelected = selectedNodeId === node.id;
 
   const handleToggle = async () => {
     if (!hasChildren && !node.hasChildren) return;
@@ -174,10 +177,11 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, on
             bgcolor: 'action.hover',
             borderRadius: 1,
           },
+          bgcolor: isSelected ? 'action.selected' : 'transparent',
           cursor: hasChildren ? 'pointer' : 'default',
           opacity: isToggleable && !isEnabled ? 0.5 : 1,
+          borderRadius: 1,
         }}
-        onClick={handleToggle}
       >
         {isToggleable && (
           <Checkbox
@@ -190,7 +194,13 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, on
         )}
 
         {(hasChildren || node.hasChildren) && (
-          <Box sx={{ mr: 0.5, display: 'flex', alignItems: 'center', width: 28 }}>
+          <Box
+            sx={{ mr: 0.5, display: 'flex', alignItems: 'center', width: 28, cursor: 'pointer' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggle();
+            }}
+          >
             {loading ? (
               <CircularProgress size={16} />
             ) : expanded ? (
@@ -213,12 +223,32 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, on
             rel="noopener noreferrer"
             underline="hover"
             sx={{ mr: 1 }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onNodeClick && node.type === 'repository') {
+                onNodeClick(node);
+              }
+            }}
           >
             <Typography variant="body2">{node.name}</Typography>
           </Link>
         ) : (
-          <Typography variant="body2" sx={{ mr: 1 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              mr: 1,
+              cursor: node.type === 'repository' ? 'pointer' : 'default',
+              '&:hover': node.type === 'repository' ? {
+                textDecoration: 'underline'
+              } : {}
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onNodeClick && node.type === 'repository') {
+                onNodeClick(node);
+              }
+            }}
+          >
             {node.name}
           </Typography>
         )}
@@ -261,6 +291,8 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, on
               level={level + 1}
               onLoadChildren={onLoadChildren}
               onToggleEnabled={onToggleEnabled}
+              onNodeClick={onNodeClick}
+              selectedNodeId={selectedNodeId}
             />
           ))}
         </Collapse>
@@ -273,9 +305,11 @@ interface TreeViewProps {
   data: TreeNodeType[];
   onLoadChildren?: (node: TreeNodeType) => Promise<TreeNodeType[]>;
   onToggleEnabled?: (nodeId: string, enabled: boolean) => void;
+  onNodeClick?: (node: TreeNodeType) => void;
+  selectedNodeId?: string;
 }
 
-export const TreeView: React.FC<TreeViewProps> = ({ data, onLoadChildren, onToggleEnabled }) => {
+export const TreeView: React.FC<TreeViewProps> = ({ data, onLoadChildren, onToggleEnabled, onNodeClick, selectedNodeId }) => {
   return (
     <Box sx={{ width: '100%' }}>
       {data.map((node) => (
@@ -284,6 +318,8 @@ export const TreeView: React.FC<TreeViewProps> = ({ data, onLoadChildren, onTogg
           node={node}
           onLoadChildren={onLoadChildren}
           onToggleEnabled={onToggleEnabled}
+          onNodeClick={onNodeClick}
+          selectedNodeId={selectedNodeId}
         />
       ))}
     </Box>

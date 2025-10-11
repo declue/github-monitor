@@ -37,6 +37,7 @@ interface ColumnFilters {
 interface ListViewProps {
   data: TreeNodeType[];
   filteredData?: TreeNodeType[];
+  selectedRepository?: TreeNodeType | null;
 }
 
 interface FlatNode {
@@ -144,7 +145,7 @@ const flattenTree = (nodes: TreeNodeType[], parentPath = ''): FlatNode[] => {
   return result;
 };
 
-export const ListView: React.FC<ListViewProps> = ({ data, filteredData }) => {
+export const ListView: React.FC<ListViewProps> = ({ data, filteredData, selectedRepository }) => {
   const [flatData, setFlatData] = useState<FlatNode[]>([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
@@ -162,11 +163,19 @@ export const ListView: React.FC<ListViewProps> = ({ data, filteredData }) => {
   }>({});
 
   useEffect(() => {
-    const dataToFlatten = filteredData || data;
-    const flattened = flattenTree(dataToFlatten);
-    setFlatData(flattened);
+    // If a repository is selected, show only its children
+    if (selectedRepository && selectedRepository.children && selectedRepository.children.length > 0) {
+      console.log('ListView: Showing selected repository children:', selectedRepository.name, selectedRepository.children.length);
+      const flattened = flattenTree(selectedRepository.children, selectedRepository.name);
+      setFlatData(flattened);
+    } else {
+      // Otherwise show all data
+      const dataToFlatten = filteredData || data;
+      const flattened = flattenTree(dataToFlatten);
+      setFlatData(flattened);
+    }
     setPage(0); // Reset to first page when data changes
-  }, [data, filteredData]);
+  }, [data, filteredData, selectedRepository]);
 
   // Extract unique values for each column
   const uniqueValues = useMemo(() => {
@@ -392,10 +401,18 @@ export const ListView: React.FC<ListViewProps> = ({ data, filteredData }) => {
   };
 
   return (
-    <Paper elevation={2} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ p: 1, borderBottom: 1, borderColor: 'divider' }}>
+    <Paper elevation={2} sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <Box sx={{ p: 1, borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 'medium', mb: 1 }}>
-          List View ({localFilteredData.length} items)
+          {selectedRepository ? (
+            <>
+              List View - {selectedRepository.name} ({localFilteredData.length} items)
+            </>
+          ) : (
+            <>
+              List View ({localFilteredData.length} items)
+            </>
+          )}
         </Typography>
         <TextField
           fullWidth
@@ -413,7 +430,7 @@ export const ListView: React.FC<ListViewProps> = ({ data, filteredData }) => {
         />
       </Box>
 
-      <TableContainer sx={{ flexGrow: 1, overflow: 'auto' }}>
+      <TableContainer sx={{ flexGrow: 1, overflow: 'auto', minHeight: 0 }}>
         <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
@@ -563,6 +580,7 @@ export const ListView: React.FC<ListViewProps> = ({ data, filteredData }) => {
         page={page}
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
+        sx={{ flexShrink: 0, borderTop: 1, borderColor: 'divider' }}
       />
     </Paper>
   );
