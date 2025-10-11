@@ -13,16 +13,28 @@ import {
   IconButton,
   Tooltip,
   Chip,
+  Tabs,
+  Tab,
 } from '@mui/material';
-import { Refresh, GitHub, Settings as SettingsIcon } from '@mui/icons-material';
+import {
+  Refresh,
+  GitHub,
+  Settings as SettingsIcon,
+  AccountTree,
+  Dashboard,
+  Timeline,
+  Assessment,
+  Notifications,
+} from '@mui/icons-material';
 import { TreeView } from './components/TreeView';
 import { RateLimitDisplay } from './components/RateLimitDisplay';
 import { SettingsDialog } from './components/SettingsDialog';
 import { SearchFilter, type SearchFilterState } from './components/SearchFilter';
 import { ListView } from './components/ListView';
+import { TabPanel } from './components/TabPanel';
 import { fetchTree, fetchRateLimit, fetchRepoDetails } from './api';
 import type { TreeNode, RateLimitInfo } from './types';
-import { loadSettings, saveSettings } from './utils/storage';
+import { loadSettings, loadSettingsSync, saveSettings } from './utils/storage';
 import { filterTreeNodes, countTreeNodes, filterEnabledNodes } from './utils/filterTree';
 import { getVersionInfo, ENVIRONMENT } from './config/version';
 
@@ -74,6 +86,7 @@ function App() {
   const [token, setToken] = useState('');
   const [orgs, setOrgs] = useState<string[]>([]);
   const [githubApiUrl, setGithubApiUrl] = useState('https://api.github.com');
+  const [tabValue, setTabValue] = useState(0);
 
   // Cache for repository details to avoid redundant API calls
   const repoDetailsCache = useRef<Map<string, TreeNode[]>>(new Map());
@@ -177,13 +190,17 @@ function App() {
     setFilteredTreeData(updatedTree);
   }, [treeData]);
 
-  const handleSaveSettings = (newToken: string, newOrgs: string[], newGithubApiUrl: string) => {
+  const handleSaveSettings = async (newToken: string, newOrgs: string[], newGithubApiUrl: string) => {
     setToken(newToken);
     setOrgs(newOrgs);
     setGithubApiUrl(newGithubApiUrl);
-    saveSettings({ token: newToken, orgs: newOrgs, githubApiUrl: newGithubApiUrl });
+    await saveSettings({ token: newToken, orgs: newOrgs, githubApiUrl: newGithubApiUrl });
     // Clear cache when settings change
     repoDetailsCache.current.clear();
+  };
+
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
   };
 
   // Load children for a single node (used by TreeView expansion)
@@ -307,16 +324,43 @@ function App() {
   }, [loadChildrenForNode]);
 
   useEffect(() => {
-    // Load settings from localStorage
-    const settings = loadSettings();
-    if (settings) {
-      setToken(settings.token);
-      setOrgs(settings.orgs);
-      setGithubApiUrl(settings.githubApiUrl || 'https://api.github.com');
-    } else {
-      setLoading(false);
-      setSettingsOpen(true);
-    }
+    // Load settings from backend and localStorage
+    const initializeSettings = async () => {
+      try {
+        // First try to load from backend
+        const settings = await loadSettings();
+        if (settings && settings.token) {
+          setToken(settings.token);
+          setOrgs(settings.orgs);
+          setGithubApiUrl(settings.githubApiUrl || 'https://api.github.com');
+        } else {
+          // Try localStorage as fallback
+          const cachedSettings = loadSettingsSync();
+          if (cachedSettings && cachedSettings.token) {
+            setToken(cachedSettings.token);
+            setOrgs(cachedSettings.orgs);
+            setGithubApiUrl(cachedSettings.githubApiUrl || 'https://api.github.com');
+          } else {
+            setLoading(false);
+            setSettingsOpen(true);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+        // Try cached settings as fallback
+        const cachedSettings = loadSettingsSync();
+        if (cachedSettings && cachedSettings.token) {
+          setToken(cachedSettings.token);
+          setOrgs(cachedSettings.orgs);
+          setGithubApiUrl(cachedSettings.githubApiUrl || 'https://api.github.com');
+        } else {
+          setLoading(false);
+          setSettingsOpen(true);
+        }
+      }
+    };
+
+    initializeSettings();
   }, []);
 
   useEffect(() => {
@@ -388,84 +432,183 @@ function App() {
           </Toolbar>
         </AppBar>
 
-        <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', p: 1 }}>
-          {loading && (
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                minHeight: 400,
-              }}
+        <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          {/* Tabs Navigation */}
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+            <Tabs
+              value={tabValue}
+              onChange={handleTabChange}
+              aria-label="main navigation tabs"
+              variant="fullWidth"
             >
-              <CircularProgress />
-            </Box>
-          )}
+              <Tab
+                icon={<AccountTree />}
+                iconPosition="start"
+                label="Repositories"
+                sx={{ minHeight: 48 }}
+              />
+              <Tab
+                icon={<Dashboard />}
+                iconPosition="start"
+                label="Dashboard"
+                sx={{ minHeight: 48 }}
+              />
+              <Tab
+                icon={<Timeline />}
+                iconPosition="start"
+                label="Activity"
+                sx={{ minHeight: 48 }}
+              />
+              <Tab
+                icon={<Assessment />}
+                iconPosition="start"
+                label="Analytics"
+                sx={{ minHeight: 48 }}
+              />
+              <Tab
+                icon={<Notifications />}
+                iconPosition="start"
+                label="Notifications"
+                sx={{ minHeight: 48 }}
+              />
+            </Tabs>
+          </Box>
 
-          {error && (
-            <Alert
-              severity="error"
-              sx={{ mb: 2 }}
-              action={
-                !token && (
-                  <IconButton
-                    color="inherit"
-                    size="small"
-                    onClick={() => setSettingsOpen(true)}
-                  >
-                    <SettingsIcon />
-                  </IconButton>
-                )
-              }
-            >
-              {error}
-            </Alert>
-          )}
-
-          {!loading && !error && treeData.length === 0 && (
-            <Alert severity="info">
-              No repositories found. Make sure your GitHub token is configured correctly.
-            </Alert>
-          )}
-
-          {!loading && !error && treeData.length > 0 && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-              <Box sx={{ flexShrink: 0, mb: 1 }}>
-                <SearchFilter onFilterChange={handleFilterChange} />
-              </Box>
-
-              <Box sx={{ display: 'flex', gap: 1, flexGrow: 1, overflow: 'hidden' }}>
-                {/* Left side: Tree View */}
-                <Paper
-                  elevation={2}
+          {/* Tab Panels */}
+          <Box sx={{ flexGrow: 1, overflow: 'hidden', p: 1 }}>
+            {/* Repositories Tab */}
+            <TabPanel value={tabValue} index={0} noPadding>
+              {loading && (
+                <Box
                   sx={{
-                    flex: '1 1 35%',
-                    minWidth: 250,
-                    maxWidth: 500,
-                    p: 1,
-                    overflow: 'auto',
-                    bgcolor: 'background.paper',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    minHeight: 400,
                   }}
                 >
-                  <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
-                      Tree View ({countTreeNodes(filteredTreeData)} items)
-                    </Typography>
-                  </Box>
-                  <TreeView
-                    data={filteredTreeData}
-                    onLoadChildren={handleLoadChildren}
-                    onToggleEnabled={handleToggleEnabled}
-                  />
-                </Paper>
-
-                {/* Right side: List View */}
-                <Box sx={{ flex: '1 1 65%', overflow: 'hidden' }}>
-                  <ListView data={treeData} filteredData={filterEnabledNodes(filteredTreeData)} />
+                  <CircularProgress />
                 </Box>
+              )}
+
+              {error && (
+                <Alert
+                  severity="error"
+                  sx={{ mb: 2 }}
+                  action={
+                    !token && (
+                      <IconButton
+                        color="inherit"
+                        size="small"
+                        onClick={() => setSettingsOpen(true)}
+                      >
+                        <SettingsIcon />
+                      </IconButton>
+                    )
+                  }
+                >
+                  {error}
+                </Alert>
+              )}
+
+              {!loading && !error && treeData.length === 0 && (
+                <Alert severity="info">
+                  No repositories found. Make sure your GitHub token is configured correctly.
+                </Alert>
+              )}
+
+              {!loading && !error && treeData.length > 0 && (
+                <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                  <Box sx={{ flexShrink: 0, mb: 1 }}>
+                    <SearchFilter onFilterChange={handleFilterChange} />
+                  </Box>
+
+                  <Box sx={{ display: 'flex', gap: 1, flexGrow: 1, overflow: 'hidden' }}>
+                    {/* Left side: Tree View */}
+                    <Paper
+                      elevation={2}
+                      sx={{
+                        flex: '1 1 35%',
+                        minWidth: 250,
+                        maxWidth: 500,
+                        p: 1,
+                        overflow: 'auto',
+                        bgcolor: 'background.paper',
+                      }}
+                    >
+                      <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
+                          Tree View ({countTreeNodes(filteredTreeData)} items)
+                        </Typography>
+                      </Box>
+                      <TreeView
+                        data={filteredTreeData}
+                        onLoadChildren={handleLoadChildren}
+                        onToggleEnabled={handleToggleEnabled}
+                      />
+                    </Paper>
+
+                    {/* Right side: List View */}
+                    <Box sx={{ flex: '1 1 65%', overflow: 'hidden' }}>
+                      <ListView data={treeData} filteredData={filterEnabledNodes(filteredTreeData)} />
+                    </Box>
+                  </Box>
+                </Box>
+              )}
+            </TabPanel>
+
+            {/* Dashboard Tab */}
+            <TabPanel value={tabValue} index={1}>
+              <Box sx={{ p: 3, textAlign: 'center' }}>
+                <Dashboard sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="h5" gutterBottom>
+                  Dashboard
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  Dashboard feature coming soon. View repository statistics and overview here.
+                </Typography>
               </Box>
-            </Box>
-          )}
+            </TabPanel>
+
+            {/* Activity Tab */}
+            <TabPanel value={tabValue} index={2}>
+              <Box sx={{ p: 3, textAlign: 'center' }}>
+                <Timeline sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="h5" gutterBottom>
+                  Activity Timeline
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  Activity timeline feature coming soon. Track recent activities across repositories.
+                </Typography>
+              </Box>
+            </TabPanel>
+
+            {/* Analytics Tab */}
+            <TabPanel value={tabValue} index={3}>
+              <Box sx={{ p: 3, textAlign: 'center' }}>
+                <Assessment sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="h5" gutterBottom>
+                  Analytics
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  Analytics feature coming soon. Analyze repository metrics and trends.
+                </Typography>
+              </Box>
+            </TabPanel>
+
+            {/* Notifications Tab */}
+            <TabPanel value={tabValue} index={4}>
+              <Box sx={{ p: 3, textAlign: 'center' }}>
+                <Notifications sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="h5" gutterBottom>
+                  Notifications
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  Notifications feature coming soon. Manage GitHub notifications and alerts.
+                </Typography>
+              </Box>
+            </TabPanel>
+          </Box>
         </Box>
 
         <Box

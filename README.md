@@ -8,7 +8,13 @@
 ## 개발 환경 구성
 ```bash
 uv venv
+uv sync
 pnpm install
+```
+
+## 개발 모드로 실행하기
+```bash
+pnpm dev
 ```
 
 ## 빌드하기

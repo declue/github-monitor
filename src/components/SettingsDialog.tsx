@@ -14,7 +14,8 @@ import {
   Stack,
   InputAdornment,
 } from '@mui/material';
-import { Close, Add, Delete, Visibility, VisibilityOff } from '@mui/icons-material';
+import { Close, Add, Delete, Visibility, VisibilityOff, Folder } from '@mui/icons-material';
+import { getConfigPath } from '../api/config';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -38,11 +39,23 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   const [githubApiUrl, setGithubApiUrl] = useState(currentGithubApiUrl);
   const [newOrg, setNewOrg] = useState('');
   const [showToken, setShowToken] = useState(false);
+  const [configPath, setConfigPath] = useState<string>('');
 
   useEffect(() => {
     setToken(currentToken);
     setOrgs(currentOrgs);
     setGithubApiUrl(currentGithubApiUrl);
+
+    // Load config path when dialog opens
+    if (open) {
+      getConfigPath()
+        .then((paths) => {
+          setConfigPath(paths.config_file);
+        })
+        .catch((error) => {
+          console.error('Failed to get config path:', error);
+        });
+    }
   }, [currentToken, currentOrgs, currentGithubApiUrl, open]);
 
   const handleAddOrg = () => {
@@ -81,7 +94,18 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       <DialogContent>
         <Stack spacing={3} sx={{ mt: 1 }}>
           <Alert severity="info" sx={{ mb: 2 }}>
-            Settings are stored locally in your browser. Your token is never sent to any server except GitHub API.
+            <Typography variant="body2">
+              Settings are stored in your home directory configuration file.
+              Your token is never sent to any server except GitHub API.
+            </Typography>
+            {configPath && (
+              <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Folder fontSize="small" />
+                <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
+                  {configPath}
+                </Typography>
+              </Box>
+            )}
           </Alert>
 
           <Box>
