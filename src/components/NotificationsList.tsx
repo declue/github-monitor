@@ -366,7 +366,29 @@ export const NotificationsList: React.FC<NotificationsListProps> = ({
       )}
 
       {/* Notifications Grid */}
-      <Paper sx={{ flexGrow: 1, overflow: 'hidden' }}>
+      <Paper
+        sx={{
+          flexGrow: 1,
+          overflow: 'hidden',
+          '& .MuiDataGrid-virtualScroller': {
+            '&::-webkit-scrollbar': {
+              width: '8px',
+              height: '8px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '4px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: 'rgba(255, 255, 255, 0.2)',
+              borderRadius: '4px',
+              '&:hover': {
+                background: 'rgba(255, 255, 255, 0.3)',
+              },
+            },
+          },
+        }}
+      >
         <DataGrid
           rows={notifications}
           columns={columns}

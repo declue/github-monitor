@@ -16,10 +16,11 @@ export function TabPanel(props: TabPanelProps) {
       hidden={value !== index}
       id={`tabpanel-${index}`}
       aria-labelledby={`tab-${index}`}
+      style={{ height: '100%', display: value === index ? 'flex' : 'none', flexDirection: 'column', overflow: 'hidden' }}
       {...other}
     >
       {value === index && (
-        <Box sx={{ p: noPadding ? 0 : 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ p: noPadding ? 0 : 1, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {children}
         </Box>
       )}

@@ -972,7 +972,7 @@ function App() {
           </DialogActions>
         </Dialog>
 
-        <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           {/* Show Notifications List if showNotifications is true */}
           {showNotifications ? (
             <NotificationsList
@@ -1019,7 +1019,7 @@ function App() {
               </Box>
 
               {/* Tab Panels */}
-              <Box sx={{ flexGrow: 1, overflow: 'hidden', p: 1 }}>
+              <Box sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             {/* Repositories Tab */}
             <TabPanel value={tabValue} index={0} noPadding>
               {loading && (
@@ -1089,12 +1089,12 @@ function App() {
               )}
 
               {!loading && !error && treeData.length > 0 && (
-                <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                   <Box sx={{ flexShrink: 0, mb: 1 }}>
                     <SearchFilter onFilterChange={handleFilterChange} />
                   </Box>
 
-                  <Box sx={{ display: 'flex', gap: 1, flexGrow: 1, overflow: 'hidden' }}>
+                  <Box sx={{ display: 'flex', gap: 1, flexGrow: 1, overflow: 'hidden', minHeight: 0 }}>
                     {/* Left side: Tree View */}
                     <Paper
                       elevation={2}
@@ -1106,7 +1106,7 @@ function App() {
                         bgcolor: 'background.paper',
                         display: 'flex',
                         flexDirection: 'column',
-                        overflow: 'hidden',
+                        height: '100%',
                       }}
                     >
                       <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
@@ -1114,7 +1114,27 @@ function App() {
                           Tree View ({countTreeNodes(filteredTreeData)} items)
                         </Typography>
                       </Box>
-                      <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+                      <Box
+                        sx={{
+                          flexGrow: 1,
+                          overflow: 'auto',
+                          minHeight: 0,
+                          '&::-webkit-scrollbar': {
+                            width: '8px',
+                          },
+                          '&::-webkit-scrollbar-track': {
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            borderRadius: '4px',
+                          },
+                          '&::-webkit-scrollbar-thumb': {
+                            background: 'rgba(255, 255, 255, 0.2)',
+                            borderRadius: '4px',
+                            '&:hover': {
+                              background: 'rgba(255, 255, 255, 0.3)',
+                            },
+                          },
+                        }}
+                      >
                         <TreeView
                           data={filteredTreeData}
                           onLoadChildren={handleLoadChildren}
@@ -1126,7 +1146,7 @@ function App() {
                     </Paper>
 
                     {/* Right side: List View */}
-                    <Box sx={{ flex: '1 1 65%', overflow: 'hidden' }}>
+                    <Box sx={{ flex: '1 1 65%', height: '100%', overflow: 'hidden' }}>
                       <ListView
                         data={treeData}
                         filteredData={filterEnabledNodes(filteredTreeData)}

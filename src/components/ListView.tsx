@@ -430,7 +430,28 @@ export const ListView: React.FC<ListViewProps> = ({ data, filteredData, selected
         />
       </Box>
 
-      <TableContainer sx={{ flexGrow: 1, overflow: 'auto', minHeight: 0 }}>
+      <TableContainer
+        sx={{
+          flexGrow: 1,
+          overflow: 'auto',
+          minHeight: 0,
+          '&::-webkit-scrollbar': {
+            width: '8px',
+            height: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '4px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: 'rgba(255, 255, 255, 0.2)',
+            borderRadius: '4px',
+            '&:hover': {
+              background: 'rgba(255, 255, 255, 0.3)',
+            },
+          },
+        }}
+      >
         <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
