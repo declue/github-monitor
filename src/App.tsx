@@ -38,6 +38,7 @@ import type { TreeNode, RateLimitInfo } from './types';
 import { loadSettings, loadSettingsSync, saveSettings } from './utils/storage';
 import { filterTreeNodes, countTreeNodes, filterEnabledNodes } from './utils/filterTree';
 import { getVersionInfo, ENVIRONMENT } from './config/version';
+import { getEnabledRepos, updateEnabledRepos } from './api/config';
 
 const darkTheme = createTheme({
   palette: {
@@ -108,18 +109,22 @@ function App() {
       setLoading(true);
       setError(null);
 
-      const [tree, rate] = await Promise.all([
+      const [tree, rate, enabledRepos] = await Promise.all([
         fetchTree(orgs, token, githubApiUrl),
         fetchRateLimit(token, githubApiUrl),
+        getEnabledRepos().catch(() => []),  // Get saved enabled repos, fallback to empty array
       ]);
 
-      // Initialize all orgs and repos as enabled by default
+      // Create a map of node_id to enabled status
+      const enabledMap = new Map(enabledRepos.map(repo => [repo.node_id, repo.enabled]));
+
+      // Initialize orgs and repos with saved enabled state or default to true
       const treeWithEnabled = tree.map(org => ({
         ...org,
-        enabled: true,
+        enabled: enabledMap.has(org.id) ? enabledMap.get(org.id) : true,
         children: org.children.map(repo => ({
           ...repo,
-          enabled: true,
+          enabled: enabledMap.has(repo.id) ? enabledMap.get(repo.id) : true,
         })),
       }));
 
@@ -157,7 +162,7 @@ function App() {
     }
   }, [treeData]);
 
-  const handleToggleEnabled = useCallback((nodeId: string, enabled: boolean) => {
+  const handleToggleEnabled = useCallback(async (nodeId: string, enabled: boolean) => {
     const updateNodeEnabled = (nodes: TreeNode[]): TreeNode[] => {
       return nodes.map(node => {
         if (node.id === nodeId) {
@@ -189,6 +194,28 @@ function App() {
     const updatedTree = updateNodeEnabled(treeData);
     setTreeData(updatedTree);
     setFilteredTreeData(updatedTree);
+
+    // Save enabled state to backend
+    const collectEnabledStates = (nodes: TreeNode[]): Array<{ node_id: string; enabled: boolean }> => {
+      const states: Array<{ node_id: string; enabled: boolean }> = [];
+      nodes.forEach(node => {
+        // Only save org and repo states (not workflows, branches, etc.)
+        if (node.type === 'organization' || node.type === 'repository') {
+          states.push({ node_id: node.id, enabled: node.enabled !== false });
+        }
+        if (node.children) {
+          states.push(...collectEnabledStates(node.children));
+        }
+      });
+      return states;
+    };
+
+    try {
+      const enabledStates = collectEnabledStates(updatedTree);
+      await updateEnabledRepos(enabledStates);
+    } catch (error) {
+      console.error('Failed to save enabled state:', error);
+    }
   }, [treeData]);
 
   const handleSaveSettings = async (newToken: string, newOrgs: string[], newGithubApiUrl: string) => {

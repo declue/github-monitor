@@ -9,7 +9,7 @@ from datetime import datetime
 from github_client import GitHubClient
 from models import TreeNode, RateLimitInfo
 from config import settings
-from config_manager import get_config_manager, AppConfig, WatchedRepo
+from config_manager import get_config_manager, AppConfig, WatchedRepo, EnabledRepo
 from version import __version__, __app_name__, __description__
 
 app = FastAPI(
@@ -552,3 +552,22 @@ async def get_config_path():
         "config_file": str(config_manager.config_file_path),
         "config_directory": str(config_manager.config_directory)
     }
+
+
+class EnabledReposUpdate(PydanticBaseModel):
+    enabled_repos: List[Dict[str, Any]]
+
+
+@app.get("/api/config/enabled-repos", response_model=List[EnabledRepo])
+async def get_enabled_repos():
+    """Get list of enabled/disabled repositories in TreeView"""
+    config_manager = get_config_manager()
+    return config_manager.get_enabled_repos()
+
+
+@app.post("/api/config/enabled-repos")
+async def update_enabled_repos(update: EnabledReposUpdate):
+    """Update the enabled/disabled state of repositories in TreeView"""
+    config_manager = get_config_manager()
+    config_manager.update_enabled_repos(update.enabled_repos)
+    return {"status": "updated", "enabled_repos": update.enabled_repos}

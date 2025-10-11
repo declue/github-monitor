@@ -178,3 +178,31 @@ export async function getConfigPath(): Promise<{ config_file: string; config_dir
   }
   return await response.json();
 }
+
+/**
+ * Get enabled/disabled repositories
+ */
+export async function getEnabledRepos(): Promise<Array<{ node_id: string; enabled: boolean }>> {
+  const response = await fetch(`${API_BASE_URL}/api/config/enabled-repos`);
+  if (!response.ok) {
+    throw new Error('Failed to get enabled repositories');
+  }
+  return await response.json();
+}
+
+/**
+ * Update enabled/disabled repositories
+ */
+export async function updateEnabledRepos(enabledRepos: Array<{ node_id: string; enabled: boolean }>) {
+  const response = await fetch(`${API_BASE_URL}/api/config/enabled-repos`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ enabled_repos: enabledRepos }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to update enabled repositories');
+  }
+}

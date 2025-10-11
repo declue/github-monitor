@@ -34,10 +34,16 @@ class UIConfig(BaseModel):
     window_position: Optional[Dict[str, int]] = None
 
 
+class EnabledRepo(BaseModel):
+    """Enabled repository configuration"""
+    node_id: str  # The node ID from TreeView (e.g., "org-microsoft", "repo-microsoft-vscode")
+    enabled: bool = True
+
 class AppConfig(BaseModel):
     """Main application configuration"""
     github: GitHubConfig = Field(default_factory=GitHubConfig)
     watched_repos: List[WatchedRepo] = Field(default_factory=list)
+    enabled_repos: List[EnabledRepo] = Field(default_factory=list)  # Stores which repos are enabled/disabled in TreeView
     ui: UIConfig = Field(default_factory=UIConfig)
     auto_refresh_interval: int = 300  # seconds
     max_repos_per_org: int = 100
@@ -199,6 +205,28 @@ class ConfigManager:
         """
         config = self.get_config()
         return config.watched_repos
+
+    def update_enabled_repos(self, enabled_repos: List[Dict[str, Any]]):
+        """Update the enabled/disabled state of repositories in TreeView
+
+        Args:
+            enabled_repos: List of dicts with node_id and enabled status
+        """
+        config = self.get_config()
+        config.enabled_repos = [
+            EnabledRepo(node_id=repo['node_id'], enabled=repo['enabled'])
+            for repo in enabled_repos
+        ]
+        self.save_config()
+
+    def get_enabled_repos(self) -> List[EnabledRepo]:
+        """Get list of enabled/disabled repositories
+
+        Returns:
+            List[EnabledRepo]: List of repository enable states
+        """
+        config = self.get_config()
+        return config.enabled_repos
 
     def update_ui_theme(self, theme: str):
         """Update UI theme
