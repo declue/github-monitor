@@ -32,12 +32,30 @@ export const fetchRepoDetails = async (
   token?: string,
   githubApiUrl?: string
 ): Promise<TreeNode[]> => {
+  console.log(`fetchRepoDetails called: ${owner}/${repo}, token: ${token ? 'present' : 'missing'}`);
+
   const headers = {
     ...(token && { 'X-GitHub-Token': token }),
     ...(githubApiUrl && { 'X-GitHub-API-URL': githubApiUrl }),
   };
-  const response = await api.get<TreeNode[]>(`/api/repo-details/${owner}/${repo}`, { headers });
-  return response.data;
+
+  console.log('Request headers:', headers);
+
+  try {
+    const response = await api.get<TreeNode[]>(`/api/repo-details/${owner}/${repo}`, { headers });
+    console.log(`API response for ${owner}/${repo}:`, response.data);
+    console.log(`Response length: ${response.data.length}`);
+
+    if (!response.data || response.data.length === 0) {
+      console.warn(`Empty response for ${owner}/${repo}`);
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error(`API error for ${owner}/${repo}:`, error);
+    // Return empty array on error instead of throwing
+    return [];
+  }
 };
 
 // Notifications API

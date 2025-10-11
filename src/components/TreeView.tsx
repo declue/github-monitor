@@ -117,10 +117,11 @@ const getStatusColor = (status?: string) => {
 export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, onLoadChildren, onToggleEnabled }) => {
   const [expanded, setExpanded] = useState(level < 2);
   const [loading, setLoading] = useState(false);
-  const [isChildrenLoaded, setIsChildrenLoaded] = useState(node.isLoaded || false);
 
   // Use node.children directly from props to reflect updates
   const children = node.children || [];
+  // Check if children are already loaded - either from node.isLoaded or if children exist
+  const isChildrenLoaded = node.isLoaded || (children.length > 0);
   const hasChildren = (node.hasChildren || children.length > 0) && !loading;
   const shouldShowChildren = children.length > 0;
   const isToggleable = node.type === 'organization' || node.type === 'repository';
@@ -141,7 +142,6 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, on
       setLoading(true);
       try {
         await onLoadChildren(node);
-        setIsChildrenLoaded(true);
         setExpanded(true);
       } catch (error) {
         console.error('Failed to load children:', error);
@@ -149,6 +149,7 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({ node, level = 0, on
         setLoading(false);
       }
     } else {
+      // Children are already loaded, just expand
       setExpanded(true);
     }
   };

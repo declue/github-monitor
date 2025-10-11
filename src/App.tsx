@@ -107,8 +107,14 @@ function App() {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [notificationRefreshInterval, setNotificationRefreshInterval] = useState(15);
 
-  // Cache for repository details to avoid redundant API calls
-  const repoDetailsCache = useRef<Map<string, TreeNode[]>>(new Map());
+  // Smart cache for repository details with loading state tracking
+  interface CacheEntry {
+    data: TreeNode[] | null;
+    loading: boolean;
+    promise?: Promise<TreeNode[]>;
+    timestamp: number;
+  }
+  const repoDetailsCache = useRef<Map<string, CacheEntry>>(new Map());
   const notificationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Track whether we've done the initial load
@@ -118,8 +124,69 @@ function App() {
   const isDevelopment = ENVIRONMENT === 'development';
   const isProduction = ENVIRONMENT === 'production';
 
+  // Smart function to get or fetch repo details with proper caching and loading state
+  const getOrFetchRepoDetails = useCallback(async (owner: string, repoName: string, authToken?: string, apiUrl?: string): Promise<TreeNode[]> => {
+    const cacheKey = `${owner}/${repoName}`;
+    const cacheEntry = repoDetailsCache.current.get(cacheKey);
+
+    // If we have valid cached data, return it
+    if (cacheEntry?.data && cacheEntry.data.length > 0) {
+      console.log(`Cache hit for ${cacheKey}: ${cacheEntry.data.length} items`);
+      return cacheEntry.data;
+    }
+
+    // If already loading, wait for the existing promise
+    if (cacheEntry?.loading && cacheEntry.promise) {
+      console.log(`Already loading ${cacheKey}, waiting for existing promise...`);
+      return cacheEntry.promise;
+    }
+
+    // Use provided token/apiUrl or fall back to component state
+    const tokenToUse = authToken || token;
+    const apiUrlToUse = apiUrl || githubApiUrl;
+
+    // Create a new fetch promise
+    console.log(`Cache miss for ${cacheKey}, fetching from API with token: ${tokenToUse ? 'present' : 'missing'}`);
+    const fetchPromise = fetchRepoDetails(owner, repoName, tokenToUse, apiUrlToUse)
+      .then(children => {
+        console.log(`Fetched ${children.length} items for ${cacheKey}`);
+
+        // Only cache non-empty results
+        if (children && children.length > 0) {
+          repoDetailsCache.current.set(cacheKey, {
+            data: children,
+            loading: false,
+            timestamp: Date.now()
+          });
+        } else {
+          console.warn(`Empty response for ${cacheKey}, not caching`);
+          // Remove any existing cache entry
+          repoDetailsCache.current.delete(cacheKey);
+        }
+
+        return children;
+      })
+      .catch(error => {
+        console.error(`Failed to fetch ${cacheKey}:`, error);
+        // Remove the failed entry from cache
+        repoDetailsCache.current.delete(cacheKey);
+        return [];
+      });
+
+    // Mark as loading with the promise
+    repoDetailsCache.current.set(cacheKey, {
+      data: null,
+      loading: true,
+      promise: fetchPromise,
+      timestamp: Date.now()
+    });
+
+    return fetchPromise;
+  }, [token, githubApiUrl]);
+
   // Define loadRepoDetails first to avoid circular dependencies
-  const loadRepoDetails = useCallback(async (repos: TreeNode[], currentTree: TreeNode[]) => {
+  const loadRepoDetails = useCallback(async (repos: TreeNode[], authToken?: string, apiUrl?: string) => {
+    console.log('loadRepoDetails called with repos:', repos, 'token:', authToken ? 'present' : 'missing');
     setLoadingDetails(true);
     setLoadingProgress({ current: 0, total: repos.length });
 
@@ -131,23 +198,16 @@ function App() {
 
       const owner = repo.metadata?.owner;
       const repoName = repo.name;
+      console.log(`Processing repo ${i+1}/${repos.length}: ${owner}/${repoName}`);
 
-      if (!owner || !repoName) continue;
-
-      const cacheKey = `${owner}/${repoName}`;
-
-      // Check cache first
-      if (repoDetailsCache.current.has(cacheKey)) {
-        updatedNodes.set(repo.id, repoDetailsCache.current.get(cacheKey)!);
-      } else {
-        try {
-          const children = await fetchRepoDetails(owner, repoName, token, githubApiUrl);
-          repoDetailsCache.current.set(cacheKey, children);
-          updatedNodes.set(repo.id, children);
-        } catch (error) {
-          console.error(`Failed to load details for ${owner}/${repoName}:`, error);
-        }
+      if (!owner || !repoName) {
+        console.warn('Skipping repo without owner/name:', repo);
+        continue;
       }
+
+      // Use smart cache function with provided token
+      const children = await getOrFetchRepoDetails(owner, repoName, authToken, apiUrl);
+      updatedNodes.set(repo.id, children);
 
       // Small delay to avoid rate limiting
       if (i < repos.length - 1) {
@@ -155,13 +215,17 @@ function App() {
       }
     }
 
-    // Update tree with loaded children
+    console.log('All repos processed. updatedNodes:', updatedNodes);
+
+    // Update tree with loaded children using functional update
     const updateTreeWithDetails = (nodes: TreeNode[]): TreeNode[] => {
       return nodes.map(node => {
         if (node.type === 'repository' && updatedNodes.has(node.id)) {
+          const newChildren = updatedNodes.get(node.id);
+          console.log(`Updating node ${node.id} with ${newChildren?.length} children`);
           return {
             ...node,
-            children: updatedNodes.get(node.id),
+            children: newChildren,
             isLoaded: true,
           };
         }
@@ -175,15 +239,32 @@ function App() {
       });
     };
 
-    const updatedTree = updateTreeWithDetails(currentTree);
-    setTreeData(updatedTree);
-    setFilteredTreeData(updatedTree);
+    // Use functional updates to ensure we're working with the latest state
+    setTreeData(prevTree => {
+      const updated = updateTreeWithDetails(prevTree);
+      console.log('Updated treeData after background loading:', updated);
+      // Log specific repos that were updated
+      updated.forEach(org => {
+        org.children?.forEach(repo => {
+          if (updatedNodes.has(repo.id)) {
+            console.log(`Repo ${repo.name} now has ${repo.children?.length || 0} children`);
+          }
+        });
+      });
+      return updated;
+    });
+    setFilteredTreeData(prevTree => {
+      const updated = updateTreeWithDetails(prevTree);
+      console.log('Updated filteredTreeData after background loading:', updated);
+      return updated;
+    });
 
     setLoadingDetails(false);
     setLoadingProgress({ current: 0, total: 0 });
-  }, [token, githubApiUrl]);
+    console.log('loadRepoDetails completed');
+  }, [getOrFetchRepoDetails]);
 
-  const loadDetailsForEnabledRepos = useCallback(async (tree: TreeNode[]) => {
+  const loadDetailsForEnabledRepos = useCallback(async (tree: TreeNode[], authToken?: string, apiUrl?: string) => {
     // Collect all enabled repositories
     const enabledRepos: TreeNode[] = [];
     tree.forEach(org => {
@@ -203,12 +284,12 @@ function App() {
     if (enabledRepos.length >= 10) {
       console.log('Too many repos, showing warning dialog');
       setWarningDialogOpen(true);
-      setPendingDetailLoad(() => () => loadRepoDetails(enabledRepos, tree));
+      setPendingDetailLoad(() => () => loadRepoDetails(enabledRepos, authToken, apiUrl));
       return;
     }
 
     console.log('Loading repo details...');
-    await loadRepoDetails(enabledRepos, tree);
+    await loadRepoDetails(enabledRepos, authToken, apiUrl);
   }, [loadRepoDetails]);
 
   // Load data with specific settings (used for initial load)
@@ -239,12 +320,16 @@ function App() {
       const enabledMap = new Map(enabledRepos.map(repo => [repo.node_id, repo.enabled]));
 
       // Initialize orgs and repos with saved enabled state
+      // Make sure repository nodes don't have empty children array initially
       const treeWithEnabled = tree.map(org => ({
         ...org,
         enabled: enabledMap.has(org.id) ? enabledMap.get(org.id) : true,
         children: org.children.map(repo => ({
           ...repo,
           enabled: enabledMap.has(repo.id) ? enabledMap.get(repo.id) : true,
+          // Don't set children to empty array for repos - leave it undefined
+          // This allows proper detection of whether children need to be loaded
+          children: repo.type === 'repository' ? undefined : repo.children,
         })),
       }));
 
@@ -254,8 +339,9 @@ function App() {
       setRateLimit(rate);
 
       // Load details for enabled repositories
+      // The smart cache will handle all timing issues
       console.log('Auto-loading details for enabled repos...');
-      await loadDetailsForEnabledRepos(treeWithEnabled);
+      await loadDetailsForEnabledRepos(treeWithEnabled, settingsToken, settingsApiUrl);
       console.log('Auto-load of details completed');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load data';
@@ -304,6 +390,8 @@ function App() {
         children: org.children.map(repo => ({
           ...repo,
           enabled: enabledMap.has(repo.id) ? enabledMap.get(repo.id) : true,
+          // Don't set children to empty array for repos - leave it undefined
+          children: repo.type === 'repository' ? undefined : repo.children,
         })),
       }));
 
@@ -313,8 +401,9 @@ function App() {
       setRateLimit(rate);
 
       // Load details for enabled repositories
+      // The smart cache will handle all timing issues
       console.log('Auto-loading details for enabled repos...');
-      await loadDetailsForEnabledRepos(treeWithEnabled);
+      await loadDetailsForEnabledRepos(treeWithEnabled, token, githubApiUrl);
       console.log('Auto-load of details completed');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load data';
@@ -428,9 +517,9 @@ function App() {
       if (affectedRepos.length > 0) {
         if (affectedRepos.length >= 10) {
           setWarningDialogOpen(true);
-          setPendingDetailLoad(() => () => loadRepoDetails(affectedRepos, updatedTree));
+          setPendingDetailLoad(() => () => loadRepoDetails(affectedRepos));
         } else {
-          await loadRepoDetails(affectedRepos, updatedTree);
+          await loadRepoDetails(affectedRepos);
         }
       }
     } catch (error) {
@@ -444,6 +533,7 @@ function App() {
     setGithubApiUrl(newGithubApiUrl);
     await saveSettings({ token: newToken, orgs: newOrgs, githubApiUrl: newGithubApiUrl });
     // Clear cache when settings change
+    console.log('Clearing cache due to settings change');
     repoDetailsCache.current.clear();
   };
 
@@ -487,8 +577,11 @@ function App() {
 
   // Load children for a single node (used by TreeView expansion)
   const handleLoadChildren = useCallback(async (node: TreeNode): Promise<TreeNode[]> => {
+    console.log('handleLoadChildren called for:', node.id, node.type, node.name);
+
     // Only handle repository nodes for lazy loading
     if (node.type !== 'repository') {
+      console.log('Not a repository node, returning existing children');
       return node.children || [];
     }
 
@@ -500,41 +593,33 @@ function App() {
       return [];
     }
 
-    const cacheKey = `${owner}/${repo}`;
+    // Use smart cache function
+    const children = await getOrFetchRepoDetails(owner, repo);
 
-    // Check cache first
-    if (repoDetailsCache.current.has(cacheKey)) {
-      return repoDetailsCache.current.get(cacheKey)!;
-    }
+    // Update treeData with loaded children using functional update
+    const updateNodeChildren = (nodes: TreeNode[]): TreeNode[] => {
+      return nodes.map(n => {
+        if (n.id === node.id) {
+          console.log('Updating node with children:', n.id, 'Count:', children.length);
+          return { ...n, children, isLoaded: true };
+        }
+        if (n.children && n.children.length > 0) {
+          return { ...n, children: updateNodeChildren(n.children) };
+        }
+        return n;
+      });
+    };
 
-    try {
-      const children = await fetchRepoDetails(owner, repo, token, githubApiUrl);
-      // Cache the result
-      repoDetailsCache.current.set(cacheKey, children);
+    // Use functional updates to avoid stale closure issues
+    setTreeData(prevTree => {
+      const updated = updateNodeChildren(prevTree);
+      console.log('Updated tree data:', updated);
+      return updated;
+    });
+    setFilteredTreeData(prevTree => updateNodeChildren(prevTree));
 
-      // Update treeData with loaded children
-      const updateNodeChildren = (nodes: TreeNode[]): TreeNode[] => {
-        return nodes.map(n => {
-          if (n.id === node.id) {
-            return { ...n, children, isLoaded: true };
-          }
-          if (n.children && n.children.length > 0) {
-            return { ...n, children: updateNodeChildren(n.children) };
-          }
-          return n;
-        });
-      };
-
-      const updatedTree = updateNodeChildren(treeData);
-      setTreeData(updatedTree);
-      setFilteredTreeData(updatedTree);
-
-      return children;
-    } catch (error) {
-      console.error(`Failed to load details for ${owner}/${repo}:`, error);
-      return [];
-    }
-  }, [token, githubApiUrl, treeData]);
+    return children;
+  }, [getOrFetchRepoDetails]);
 
   // Load children without updating state (used for batch loading during filter)
   const loadChildrenForNode = useCallback(async (node: TreeNode): Promise<TreeNode[]> => {
@@ -550,23 +635,9 @@ function App() {
       return [];
     }
 
-    const cacheKey = `${owner}/${repo}`;
-
-    // Check cache first
-    if (repoDetailsCache.current.has(cacheKey)) {
-      return repoDetailsCache.current.get(cacheKey)!;
-    }
-
-    try {
-      const children = await fetchRepoDetails(owner, repo, token, githubApiUrl);
-      // Cache the result
-      repoDetailsCache.current.set(cacheKey, children);
-      return children;
-    } catch (error) {
-      console.error(`Failed to load details for ${owner}/${repo}:`, error);
-      return [];
-    }
-  }, [token, githubApiUrl]);
+    // Use smart cache function - it handles everything
+    return getOrFetchRepoDetails(owner, repo);
+  }, [getOrFetchRepoDetails]);
 
   const expandAllRepositories = useCallback(async (nodes: TreeNode[], onlyEnabled: boolean = false): Promise<TreeNode[]> => {
     const expandedNodes: TreeNode[] = [];
@@ -795,6 +866,9 @@ function App() {
                 color="inherit"
                 onClick={() => {
                   console.log('Manual refresh clicked');
+                  // Clear cache on manual refresh to force fresh data
+                  console.log('Clearing all cached repo details');
+                  repoDetailsCache.current.clear();
                   loadData();
                 }}
                 disabled={loading || !token}
