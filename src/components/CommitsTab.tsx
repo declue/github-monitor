@@ -130,47 +130,45 @@ export const CommitsTab: React.FC<CommitsTabProps> = () => {
   const unstagedFiles = status?.files.filter(f => !f.staged) || [];
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 2 }}>
-      {/* Repository Path */}
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 1 }}>
+      {/* Repository Path - Compact */}
+      <Paper sx={{ p: 1, mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <TextField
             fullWidth
             size="small"
-            label="Repository Path"
             value={repoPath}
             onChange={(e) => setRepoPath(e.target.value)}
-            placeholder="C:\Users\username\git\repository"
+            placeholder="Repository Path"
+            sx={{
+              '& .MuiInputBase-root': { height: 32, fontSize: '0.875rem' },
+              '& .MuiInputBase-input': { py: 0.5 },
+            }}
           />
           <Tooltip title="Browse">
-            <IconButton onClick={handleBrowseRepo} color="primary">
-              <FolderOpen />
+            <IconButton onClick={handleBrowseRepo} size="small" color="primary" sx={{ p: 0.5 }}>
+              <FolderOpen fontSize="small" />
             </IconButton>
           </Tooltip>
           <Tooltip title="Refresh">
-            <IconButton onClick={loadGitData} disabled={loading || !repoPath} color="primary">
-              <Refresh />
+            <IconButton onClick={loadGitData} disabled={loading || !repoPath} size="small" color="primary" sx={{ p: 0.5 }}>
+              <Refresh fontSize="small" />
             </IconButton>
           </Tooltip>
+          {status && (
+            <>
+              <Typography variant="caption" color="text.secondary" sx={{ ml: 1, fontSize: '0.75rem' }}>
+                {status.branch}
+              </Typography>
+              {status.ahead > 0 && (
+                <Chip label={`↑${status.ahead}`} size="small" color="success" sx={{ height: 18, fontSize: '0.7rem' }} />
+              )}
+              {status.behind > 0 && (
+                <Chip label={`↓${status.behind}`} size="small" color="warning" sx={{ height: 18, fontSize: '0.7rem' }} />
+              )}
+            </>
+          )}
         </Box>
-
-        {status && (
-          <Box sx={{ mt: 1, display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Typography variant="caption" color="text.secondary">
-              Branch: <strong>{status.branch}</strong>
-            </Typography>
-            {status.ahead > 0 && (
-              <Typography variant="caption" color="success.main">
-                ↑ {status.ahead} ahead
-              </Typography>
-            )}
-            {status.behind > 0 && (
-              <Typography variant="caption" color="warning.main">
-                ↓ {status.behind} behind
-              </Typography>
-            )}
-          </Box>
-        )}
       </Paper>
 
       {/* Error Alert */}
@@ -187,19 +185,41 @@ export const CommitsTab: React.FC<CommitsTabProps> = () => {
         </Box>
       )}
 
-      {/* Main Content */}
+      {/* Main Content - GitHub Desktop Layout */}
       {!loading && repoPath && status && (
-        <Box sx={{ display: 'flex', gap: 2, flexGrow: 1, minHeight: 0 }}>
-          {/* Left Side: Changes */}
-          <Box sx={{ flex: '1 1 40%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <Paper sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-                <Typography variant="h6">Changes</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {stagedFiles.length} staged, {unstagedFiles.length} unstaged
+        <Box sx={{ display: 'flex', gap: 1, flexGrow: 1, minHeight: 0 }}>
+          {/* Left Side: Changes + Commit Form */}
+          <Box sx={{ flex: '0 0 320px', display: 'flex', flexDirection: 'column', gap: 1, minHeight: 0 }}>
+            {/* Changes */}
+            <Paper sx={{ flex: '1 1 60%', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
+              <Box sx={{ p: 1, borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
+                <Typography variant="subtitle2" sx={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                  Changes
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                  {stagedFiles.length} staged · {unstagedFiles.length} unstaged
                 </Typography>
               </Box>
-              <Box sx={{ flexGrow: 1, overflow: 'auto', minHeight: 0 }}>
+              <Box
+                sx={{
+                  flexGrow: 1,
+                  overflow: 'auto',
+                  minHeight: 0,
+                  '&::-webkit-scrollbar': {
+                    width: '6px',
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    background: 'rgba(255, 255, 255, 0.05)',
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    borderRadius: '3px',
+                    '&:hover': {
+                      background: 'rgba(255, 255, 255, 0.3)',
+                    },
+                  },
+                }}
+              >
                 <FileChanges
                   stagedFiles={stagedFiles}
                   unstagedFiles={unstagedFiles}
@@ -209,60 +229,82 @@ export const CommitsTab: React.FC<CommitsTabProps> = () => {
                 />
               </Box>
             </Paper>
-          </Box>
 
-          {/* Right Side: Commit Form + History */}
-          <Box sx={{ flex: '1 1 60%', display: 'flex', flexDirection: 'column', gap: 2, minHeight: 0 }}>
-            {/* Commit Form */}
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Commit Message
-              </Typography>
+            {/* Commit Form - Compact */}
+            <Paper sx={{ flex: '0 0 auto', p: 1 }}>
               <TextField
                 fullWidth
                 size="small"
-                label="Summary"
+                placeholder="Summary (required)"
                 value={commitMessage}
                 onChange={(e) => setCommitMessage(e.target.value)}
-                placeholder="Brief description of changes"
-                sx={{ mb: 2 }}
                 disabled={committing}
+                sx={{
+                  mb: 0.5,
+                  '& .MuiInputBase-root': { fontSize: '0.875rem' },
+                }}
               />
               <TextField
                 fullWidth
                 multiline
-                rows={3}
+                rows={2}
                 size="small"
-                label="Description (optional)"
+                placeholder="Description (optional)"
                 value={commitDescription}
                 onChange={(e) => setCommitDescription(e.target.value)}
-                placeholder="Detailed description of changes"
-                sx={{ mb: 2 }}
                 disabled={committing}
+                sx={{
+                  mb: 1,
+                  '& .MuiInputBase-root': { fontSize: '0.875rem' },
+                }}
               />
               <Button
                 fullWidth
                 variant="contained"
+                size="small"
                 onClick={handleCommit}
                 disabled={committing || !commitMessage.trim() || stagedFiles.length === 0}
+                sx={{ textTransform: 'none', fontSize: '0.875rem' }}
               >
-                {committing ? <CircularProgress size={24} /> : `Commit to ${status.branch}`}
+                {committing ? <CircularProgress size={20} /> : `Commit to ${status.branch}`}
               </Button>
             </Paper>
-
-            {/* Commit History */}
-            <Paper sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
-              <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-                <Typography variant="h6">History</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {commits.length} recent commits
-                </Typography>
-              </Box>
-              <Box sx={{ flexGrow: 1, overflow: 'auto', minHeight: 0 }}>
-                <CommitHistory commits={commits} />
-              </Box>
-            </Paper>
           </Box>
+
+          {/* Right Side: History */}
+          <Paper sx={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
+            <Box sx={{ p: 1, borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
+              <Typography variant="subtitle2" sx={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                History
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                {commits.length} recent commits
+              </Typography>
+            </Box>
+            <Box
+              sx={{
+                flexGrow: 1,
+                overflow: 'auto',
+                minHeight: 0,
+                '&::-webkit-scrollbar': {
+                  width: '8px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: '4px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  borderRadius: '4px',
+                  '&:hover': {
+                    background: 'rgba(255, 255, 255, 0.3)',
+                  },
+                },
+              }}
+            >
+              <CommitHistory commits={commits} />
+            </Box>
+          </Paper>
         </Box>
       )}
 

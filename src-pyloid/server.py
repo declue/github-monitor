@@ -782,17 +782,32 @@ class GitRepoInfo(PydanticBaseModel):
 def run_git_command(repo_path: str, *args) -> str:
     """Run a git command in the specified repository"""
     try:
+        # Set environment variables to force UTF-8 encoding
+        env = os.environ.copy()
+        env['LANG'] = 'en_US.UTF-8'
+        env['LC_ALL'] = 'en_US.UTF-8'
+
         result = subprocess.run(
             ['git', '-C', repo_path, *args],
             capture_output=True,
             text=True,
-            check=True
+            encoding='utf-8',
+            errors='replace',  # Replace invalid characters instead of raising error
+            check=True,
+            env=env
         )
         return result.stdout
     except subprocess.CalledProcessError as e:
+        # Handle stderr encoding issues
+        stderr_msg = e.stderr if e.stderr else 'Unknown error'
         raise HTTPException(
             status_code=400,
-            detail=f"Git command failed: {e.stderr}"
+            detail=f"Git command failed: {stderr_msg}"
+        )
+    except UnicodeDecodeError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Encoding error: {str(e)}. Try running git config --global i18n.logOutputEncoding utf-8"
         )
 
 @app.get("/api/git/repos", response_model=List[GitRepoInfo])

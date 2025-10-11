@@ -80,49 +80,54 @@ export const FileChanges: React.FC<FileChangesProps> = ({
       {/* Staged Files Section */}
       {stagedFiles.length > 0 && (
         <>
-          <ListItemButton onClick={() => setStagedExpanded(!stagedExpanded)} sx={{ py: 1 }}>
-            <ListItemIcon sx={{ minWidth: 32 }}>
-              {stagedExpanded ? <ExpandMore /> : <ChevronRight />}
+          <ListItemButton onClick={() => setStagedExpanded(!stagedExpanded)} sx={{ py: 0.5, minHeight: 32 }}>
+            <ListItemIcon sx={{ minWidth: 24 }}>
+              {stagedExpanded ? <ExpandMore fontSize="small" /> : <ChevronRight fontSize="small" />}
             </ListItemIcon>
             <ListItemText
               primary={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="subtitle2">Staged Changes</Typography>
-                  <Chip label={stagedFiles.length} size="small" color="primary" />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>
+                    Staged Changes
+                  </Typography>
+                  <Chip label={stagedFiles.length} size="small" color="primary" sx={{ height: 16, fontSize: '0.65rem' }} />
                 </Box>
               }
             />
           </ListItemButton>
           <Collapse in={stagedExpanded} timeout="auto" unmountOnExit>
-            <List dense>
+            <List dense disablePadding>
               {stagedFiles.map((file) => (
                 <ListItem
                   key={file.path}
                   disablePadding
+                  sx={{ py: 0 }}
                   secondaryAction={
                     <Checkbox
                       edge="end"
                       checked={true}
                       onChange={() => onUnstageFile(file)}
                       size="small"
+                      sx={{ p: 0.25 }}
                     />
                   }
                 >
-                  <ListItemButton sx={{ pl: 4 }}>
-                    <ListItemIcon sx={{ minWidth: 32 }}>
+                  <ListItemButton sx={{ pl: 3, py: 0.25, minHeight: 28 }}>
+                    <ListItemIcon sx={{ minWidth: 24 }}>
                       {getStatusIcon(file.status)}
                     </ListItemIcon>
                     <ListItemText
                       primary={file.path.split('/').pop() || file.path}
-                      secondary={file.path}
-                      primaryTypographyProps={{ variant: 'body2' }}
-                      secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
+                      primaryTypographyProps={{
+                        variant: 'caption',
+                        sx: { fontSize: '0.75rem', lineHeight: 1.2 }
+                      }}
                     />
                     <Chip
                       label={file.status}
                       size="small"
                       color={getStatusColor(file.status) as any}
-                      sx={{ ml: 1, height: 20, fontSize: '0.7rem' }}
+                      sx={{ ml: 0.5, height: 16, fontSize: '0.65rem', '& .MuiChip-label': { px: 0.5 } }}
                     />
                   </ListItemButton>
                 </ListItem>
@@ -136,49 +141,54 @@ export const FileChanges: React.FC<FileChangesProps> = ({
       {/* Unstaged Files Section */}
       {unstagedFiles.length > 0 && (
         <>
-          <ListItemButton onClick={() => setUnstagedExpanded(!unstagedExpanded)} sx={{ py: 1 }}>
-            <ListItemIcon sx={{ minWidth: 32 }}>
-              {unstagedExpanded ? <ExpandMore /> : <ChevronRight />}
+          <ListItemButton onClick={() => setUnstagedExpanded(!unstagedExpanded)} sx={{ py: 0.5, minHeight: 32 }}>
+            <ListItemIcon sx={{ minWidth: 24 }}>
+              {unstagedExpanded ? <ExpandMore fontSize="small" /> : <ChevronRight fontSize="small" />}
             </ListItemIcon>
             <ListItemText
               primary={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="subtitle2">Unstaged Changes</Typography>
-                  <Chip label={unstagedFiles.length} size="small" />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>
+                    Unstaged Changes
+                  </Typography>
+                  <Chip label={unstagedFiles.length} size="small" sx={{ height: 16, fontSize: '0.65rem' }} />
                 </Box>
               }
             />
           </ListItemButton>
           <Collapse in={unstagedExpanded} timeout="auto" unmountOnExit>
-            <List dense>
+            <List dense disablePadding>
               {unstagedFiles.map((file) => (
                 <ListItem
                   key={file.path}
                   disablePadding
+                  sx={{ py: 0 }}
                   secondaryAction={
                     <Checkbox
                       edge="end"
                       checked={false}
                       onChange={() => onStageFile(file)}
                       size="small"
+                      sx={{ p: 0.25 }}
                     />
                   }
                 >
-                  <ListItemButton sx={{ pl: 4 }}>
-                    <ListItemIcon sx={{ minWidth: 32 }}>
+                  <ListItemButton sx={{ pl: 3, py: 0.25, minHeight: 28 }}>
+                    <ListItemIcon sx={{ minWidth: 24 }}>
                       {getStatusIcon(file.status)}
                     </ListItemIcon>
                     <ListItemText
                       primary={file.path.split('/').pop() || file.path}
-                      secondary={file.path}
-                      primaryTypographyProps={{ variant: 'body2' }}
-                      secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
+                      primaryTypographyProps={{
+                        variant: 'caption',
+                        sx: { fontSize: '0.75rem', lineHeight: 1.2 }
+                      }}
                     />
                     <Chip
                       label={file.status}
                       size="small"
                       color={getStatusColor(file.status) as any}
-                      sx={{ ml: 1, height: 20, fontSize: '0.7rem' }}
+                      sx={{ ml: 0.5, height: 16, fontSize: '0.65rem', '& .MuiChip-label': { px: 0.5 } }}
                     />
                   </ListItemButton>
                 </ListItem>
@@ -190,8 +200,8 @@ export const FileChanges: React.FC<FileChangesProps> = ({
 
       {/* Empty State */}
       {stagedFiles.length === 0 && unstagedFiles.length === 0 && (
-        <Box sx={{ p: 3, textAlign: 'center' }}>
-          <Typography variant="body2" color="text.secondary">
+        <Box sx={{ p: 2, textAlign: 'center' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
             No changes detected
           </Typography>
         </Box>
