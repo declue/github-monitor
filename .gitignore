@@ -9,7 +9,6 @@ wheels/
 # front
 node_modules
 dist-ssr
-build
 *.local
 build-front
 dist-front

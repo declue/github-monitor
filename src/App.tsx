@@ -15,6 +15,7 @@ import {
   Chip,
   Tabs,
   Tab,
+  Button,
 } from '@mui/material';
 import {
   Refresh,
@@ -99,7 +100,7 @@ function App() {
     if (!token) {
       setError('Please configure your GitHub token in settings');
       setLoading(false);
-      setSettingsOpen(true);
+      // Don't automatically open settings dialog
       return;
     }
 
@@ -342,7 +343,7 @@ function App() {
             setGithubApiUrl(cachedSettings.githubApiUrl || 'https://api.github.com');
           } else {
             setLoading(false);
-            setSettingsOpen(true);
+            // Don't automatically open settings dialog
           }
         }
       } catch (error) {
@@ -355,7 +356,7 @@ function App() {
           setGithubApiUrl(cachedSettings.githubApiUrl || 'https://api.github.com');
         } else {
           setLoading(false);
-          setSettingsOpen(true);
+          // Don't automatically open settings dialog
         }
       }
     };
@@ -495,20 +496,46 @@ function App() {
                 </Box>
               )}
 
-              {error && (
+              {error && !token && (
+                <Box sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: 400,
+                  p: 3
+                }}>
+                  <GitHub sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                  <Typography variant="h5" gutterBottom>
+                    Welcome to JHL GitHub Desktop
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary" sx={{ mb: 3, textAlign: 'center', maxWidth: 600 }}>
+                    GitHub 저장소를 모니터링하고 관리하기 위해 먼저 설정이 필요합니다.
+                    상단 툴바의 설정 아이콘을 클릭하거나 아래 버튼을 눌러 GitHub 토큰을 설정해주세요.
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    startIcon={<SettingsIcon />}
+                    onClick={() => setSettingsOpen(true)}
+                  >
+                    설정 시작하기
+                  </Button>
+                </Box>
+              )}
+
+              {error && token && (
                 <Alert
                   severity="error"
                   sx={{ mb: 2 }}
                   action={
-                    !token && (
-                      <IconButton
-                        color="inherit"
-                        size="small"
-                        onClick={() => setSettingsOpen(true)}
-                      >
-                        <SettingsIcon />
-                      </IconButton>
-                    )
+                    <IconButton
+                      color="inherit"
+                      size="small"
+                      onClick={loadData}
+                    >
+                      <Refresh />
+                    </IconButton>
                   }
                 >
                   {error}

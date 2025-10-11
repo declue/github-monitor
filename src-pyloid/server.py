@@ -21,7 +21,7 @@ app = FastAPI(
 def start(host: str, port: int):
     import uvicorn
     # Use fixed port 8000 for development
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host=host, port=port)
 
 def setup_cors():
     app.add_middleware(
