@@ -16,6 +16,12 @@ import {
   Tabs,
   Tab,
   Button,
+  LinearProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import {
   Refresh,
@@ -89,6 +95,10 @@ function App() {
   const [orgs, setOrgs] = useState<string[]>([]);
   const [githubApiUrl, setGithubApiUrl] = useState('https://api.github.com');
   const [tabValue, setTabValue] = useState(0);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState({ current: 0, total: 0 });
+  const [warningDialogOpen, setWarningDialogOpen] = useState(false);
+  const [pendingDetailLoad, setPendingDetailLoad] = useState<() => void>(() => () => {});
 
   // Cache for repository details to avoid redundant API calls
   const repoDetailsCache = useRef<Map<string, TreeNode[]>>(new Map());
@@ -131,12 +141,104 @@ function App() {
       setTreeData(treeWithEnabled);
       setFilteredTreeData(treeWithEnabled); // Initialize filtered data
       setRateLimit(rate);
+
+      // Load details for enabled repositories
+      await loadDetailsForEnabledRepos(treeWithEnabled);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
       console.error('Error loading data:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadDetailsForEnabledRepos = async (tree: TreeNode[]) => {
+    // Collect all enabled repositories
+    const enabledRepos: TreeNode[] = [];
+    tree.forEach(org => {
+      if (org.children) {
+        org.children.forEach(repo => {
+          if (repo.type === 'repository' && repo.enabled !== false) {
+            enabledRepos.push(repo);
+          }
+        });
+      }
+    });
+
+    if (enabledRepos.length === 0) return;
+
+    // Show warning dialog if more than 10 repos are enabled
+    if (enabledRepos.length >= 10) {
+      setWarningDialogOpen(true);
+      setPendingDetailLoad(() => () => loadRepoDetails(enabledRepos));
+      return;
+    }
+
+    await loadRepoDetails(enabledRepos);
+  };
+
+  const loadRepoDetails = async (repos: TreeNode[]) => {
+    setLoadingDetails(true);
+    setLoadingProgress({ current: 0, total: repos.length });
+
+    const updatedNodes: Map<string, TreeNode[]> = new Map();
+
+    for (let i = 0; i < repos.length; i++) {
+      const repo = repos[i];
+      setLoadingProgress({ current: i + 1, total: repos.length });
+
+      const owner = repo.metadata?.owner;
+      const repoName = repo.name;
+
+      if (!owner || !repoName) continue;
+
+      const cacheKey = `${owner}/${repoName}`;
+
+      // Check cache first
+      if (repoDetailsCache.current.has(cacheKey)) {
+        updatedNodes.set(repo.id, repoDetailsCache.current.get(cacheKey)!);
+      } else {
+        try {
+          const children = await fetchRepoDetails(owner, repoName, token, githubApiUrl);
+          repoDetailsCache.current.set(cacheKey, children);
+          updatedNodes.set(repo.id, children);
+        } catch (error) {
+          console.error(`Failed to load details for ${owner}/${repoName}:`, error);
+        }
+      }
+
+      // Small delay to avoid rate limiting
+      if (i < repos.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    // Update tree with loaded children
+    const updateTreeWithDetails = (nodes: TreeNode[]): TreeNode[] => {
+      return nodes.map(node => {
+        if (node.type === 'repository' && updatedNodes.has(node.id)) {
+          return {
+            ...node,
+            children: updatedNodes.get(node.id),
+            isLoaded: true,
+          };
+        }
+        if (node.children && node.children.length > 0) {
+          return {
+            ...node,
+            children: updateTreeWithDetails(node.children),
+          };
+        }
+        return node;
+      });
+    };
+
+    const updatedTree = updateTreeWithDetails(treeData);
+    setTreeData(updatedTree);
+    setFilteredTreeData(updatedTree);
+
+    setLoadingDetails(false);
+    setLoadingProgress({ current: 0, total: 0 });
   };
 
   const handleFilterChange = useCallback(async (newFilters: SearchFilterState) => {
@@ -163,9 +265,25 @@ function App() {
   }, [treeData]);
 
   const handleToggleEnabled = useCallback(async (nodeId: string, enabled: boolean) => {
+    let affectedRepos: TreeNode[] = [];
+
     const updateNodeEnabled = (nodes: TreeNode[]): TreeNode[] => {
       return nodes.map(node => {
         if (node.id === nodeId) {
+          // If this is a repo being enabled, collect it for detail loading
+          if (node.type === 'repository' && enabled && !node.isLoaded) {
+            affectedRepos.push(node);
+          }
+
+          // If this is an org, collect all child repos being enabled
+          if (node.type === 'organization' && enabled && node.children) {
+            node.children.forEach(child => {
+              if (child.type === 'repository' && !child.isLoaded) {
+                affectedRepos.push(child);
+              }
+            });
+          }
+
           // Recursively update all children (repos under org, or workflows/runners under repo)
           const updateChildrenEnabled = (children: TreeNode[]): TreeNode[] => {
             return children.map(child => ({
@@ -213,6 +331,16 @@ function App() {
     try {
       const enabledStates = collectEnabledStates(updatedTree);
       await updateEnabledRepos(enabledStates);
+
+      // Load details for newly enabled repos
+      if (affectedRepos.length > 0) {
+        if (affectedRepos.length >= 10) {
+          setWarningDialogOpen(true);
+          setPendingDetailLoad(() => () => loadRepoDetails(affectedRepos));
+        } else {
+          await loadRepoDetails(affectedRepos);
+        }
+      }
     } catch (error) {
       console.error('Failed to save enabled state:', error);
     }
@@ -410,7 +538,7 @@ function App() {
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-        <AppBar position="static" elevation={0} sx={{ flexShrink: 0 }}>
+        <AppBar position="relative" elevation={0} sx={{ flexShrink: 0 }}>
           <Toolbar variant="dense">
             <GitHub sx={{ mr: 2 }} />
             <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
@@ -468,7 +596,58 @@ function App() {
               </IconButton>
             </Tooltip>
           </Toolbar>
+          {loadingDetails && (
+            <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}>
+              <LinearProgress
+                variant="determinate"
+                value={loadingProgress.total > 0 ? (loadingProgress.current / loadingProgress.total) * 100 : 0}
+              />
+              <Typography
+                variant="caption"
+                sx={{
+                  position: 'absolute',
+                  right: 8,
+                  bottom: 2,
+                  color: 'primary.main',
+                  fontSize: '0.7rem'
+                }}
+              >
+                Loading details: {loadingProgress.current}/{loadingProgress.total}
+              </Typography>
+            </Box>
+          )}
         </AppBar>
+
+        {/* Warning Dialog for multiple repos */}
+        <Dialog
+          open={warningDialogOpen}
+          onClose={() => setWarningDialogOpen(false)}
+        >
+          <DialogTitle>API 사용량 경고</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              {(() => {
+                const count = treeData.reduce((acc, org) => {
+                  return acc + (org.children?.filter(repo => repo.enabled !== false).length || 0);
+                }, 0);
+                return `${count}개의 저장소에 대한 상세 정보를 가져오면 API 호출이 많아질 수 있습니다. 계속하시겠습니까?`;
+              })()}
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setWarningDialogOpen(false)}>취소</Button>
+            <Button
+              onClick={() => {
+                setWarningDialogOpen(false);
+                pendingDetailLoad();
+              }}
+              autoFocus
+              variant="contained"
+            >
+              계속
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           {/* Tabs Navigation */}
