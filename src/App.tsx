@@ -21,8 +21,8 @@ import {
   GitHub,
   Settings as SettingsIcon,
   AccountTree,
-  Dashboard,
-  Timeline,
+  History,
+  PlayCircleOutline,
   Assessment,
   Notifications,
 } from '@mui/icons-material';
@@ -409,11 +409,21 @@ function App() {
 
             {rateLimit && <RateLimitDisplay rateLimit={rateLimit} />}
 
+            <Tooltip title="Notifications">
+              <IconButton
+                color="inherit"
+                onClick={() => {/* TODO: Implement notifications */}}
+                sx={{ ml: 2 }}
+              >
+                <Notifications />
+              </IconButton>
+            </Tooltip>
+
             <Tooltip title="Settings">
               <IconButton
                 color="inherit"
                 onClick={() => setSettingsOpen(true)}
-                sx={{ ml: 2 }}
+                sx={{ ml: 1 }}
               >
                 <SettingsIcon />
               </IconButton>
@@ -448,27 +458,21 @@ function App() {
                 sx={{ minHeight: 48 }}
               />
               <Tab
-                icon={<Dashboard />}
+                icon={<History />}
                 iconPosition="start"
-                label="Dashboard"
+                label="Commits"
                 sx={{ minHeight: 48 }}
               />
               <Tab
-                icon={<Timeline />}
+                icon={<PlayCircleOutline />}
                 iconPosition="start"
-                label="Activity"
+                label="Actions"
                 sx={{ minHeight: 48 }}
               />
               <Tab
                 icon={<Assessment />}
                 iconPosition="start"
                 label="Analytics"
-                sx={{ minHeight: 48 }}
-              />
-              <Tab
-                icon={<Notifications />}
-                iconPosition="start"
-                label="Notifications"
                 sx={{ minHeight: 48 }}
               />
             </Tabs>
@@ -557,28 +561,28 @@ function App() {
               )}
             </TabPanel>
 
-            {/* Dashboard Tab */}
+            {/* Commits Tab */}
             <TabPanel value={tabValue} index={1}>
               <Box sx={{ p: 3, textAlign: 'center' }}>
-                <Dashboard sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                <History sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                 <Typography variant="h5" gutterBottom>
-                  Dashboard
+                  Commits
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-                  Dashboard feature coming soon. View repository statistics and overview here.
+                  Commits feature coming soon. View commit history and changes across repositories.
                 </Typography>
               </Box>
             </TabPanel>
 
-            {/* Activity Tab */}
+            {/* Actions Tab */}
             <TabPanel value={tabValue} index={2}>
               <Box sx={{ p: 3, textAlign: 'center' }}>
-                <Timeline sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                <PlayCircleOutline sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                 <Typography variant="h5" gutterBottom>
-                  Activity Timeline
+                  Actions
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-                  Activity timeline feature coming soon. Track recent activities across repositories.
+                  Actions feature coming soon. Monitor GitHub Actions workflows and runners.
                 </Typography>
               </Box>
             </TabPanel>
@@ -592,19 +596,6 @@ function App() {
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
                   Analytics feature coming soon. Analyze repository metrics and trends.
-                </Typography>
-              </Box>
-            </TabPanel>
-
-            {/* Notifications Tab */}
-            <TabPanel value={tabValue} index={4}>
-              <Box sx={{ p: 3, textAlign: 'center' }}>
-                <Notifications sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                <Typography variant="h5" gutterBottom>
-                  Notifications
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  Notifications feature coming soon. Manage GitHub notifications and alerts.
                 </Typography>
               </Box>
             </TabPanel>
