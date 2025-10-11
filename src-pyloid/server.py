@@ -483,7 +483,8 @@ async def update_ui_config(
     theme: Optional[str] = None,
     language: Optional[str] = None,
     window_size: Optional[Dict[str, int]] = None,
-    window_position: Optional[Dict[str, int]] = None
+    window_position: Optional[Dict[str, int]] = None,
+    notifications_refresh_interval: Optional[int] = None
 ):
     """Update UI configuration"""
     config_manager = get_config_manager()
@@ -497,9 +498,11 @@ async def update_ui_config(
         config.ui.window_size = window_size
     if window_position is not None:
         config.ui.window_position = window_position
+    if notifications_refresh_interval is not None:
+        config.notifications_refresh_interval = notifications_refresh_interval
 
     config_manager.save_config()
-    return {"status": "updated", "config": config.ui}
+    return {"status": "updated", "config": config.ui, "notifications_refresh_interval": config.notifications_refresh_interval}
 
 
 @app.post("/api/config/reset")
@@ -571,3 +574,164 @@ async def update_enabled_repos(update: EnabledReposUpdate):
     config_manager = get_config_manager()
     config_manager.update_enabled_repos(update.enabled_repos)
     return {"status": "updated", "enabled_repos": update.enabled_repos}
+
+
+# Notifications API Endpoints
+
+@app.get("/api/notifications")
+async def get_notifications(
+    all: bool = False,
+    participating: bool = False,
+    page: int = 1,
+    per_page: int = 50,
+    x_github_token: Optional[str] = Header(None),
+    x_github_api_url: Optional[str] = Header(None)
+):
+    """Get notifications for the authenticated user"""
+    import httpx
+
+    try:
+        token = x_github_token or (settings.github_token if settings.github_token else None)
+        if not token:
+            raise HTTPException(status_code=401, detail="GitHub token is required")
+
+        api_url = x_github_api_url or "https://api.github.com"
+        client = get_github_client(token, api_url)
+
+        notifications = await client.get_notifications(
+            all_notifications=all,
+            participating=participating,
+            page=page,
+            per_page=per_page
+        )
+
+        # Also get the rate limit to update the UI
+        rate_limit = await client.get_rate_limit()
+
+        await client.close()
+
+        return {
+            "notifications": notifications,
+            "pagination": {
+                "page": page,
+                "per_page": per_page,
+                "has_more": len(notifications) == per_page
+            },
+            "rate_limit": rate_limit["resources"]["core"]
+        }
+
+    except HTTPException:
+        raise
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 401:
+            raise HTTPException(status_code=401, detail="Invalid GitHub token")
+        elif e.response.status_code == 403:
+            raise HTTPException(status_code=403, detail="GitHub API rate limit exceeded")
+        else:
+            raise HTTPException(status_code=e.response.status_code, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/notifications/count")
+async def get_notifications_count(
+    x_github_token: Optional[str] = Header(None),
+    x_github_api_url: Optional[str] = Header(None)
+):
+    """Get count of unread notifications"""
+    import httpx
+
+    try:
+        token = x_github_token or (settings.github_token if settings.github_token else None)
+        if not token:
+            raise HTTPException(status_code=401, detail="GitHub token is required")
+
+        api_url = x_github_api_url or "https://api.github.com"
+        client = get_github_client(token, api_url)
+
+        count_data = await client.get_notifications_count()
+
+        # Also get the rate limit to update the UI
+        rate_limit = await client.get_rate_limit()
+
+        await client.close()
+
+        return {
+            **count_data,
+            "rate_limit": rate_limit["resources"]["core"]
+        }
+
+    except HTTPException:
+        raise
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 401:
+            raise HTTPException(status_code=401, detail="Invalid GitHub token")
+        elif e.response.status_code == 403:
+            raise HTTPException(status_code=403, detail="GitHub API rate limit exceeded")
+        else:
+            raise HTTPException(status_code=e.response.status_code, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.patch("/api/notifications/{thread_id}/read")
+async def mark_notification_as_read(
+    thread_id: str,
+    x_github_token: Optional[str] = Header(None),
+    x_github_api_url: Optional[str] = Header(None)
+):
+    """Mark a single notification as read"""
+    import httpx
+
+    try:
+        token = x_github_token or (settings.github_token if settings.github_token else None)
+        if not token:
+            raise HTTPException(status_code=401, detail="GitHub token is required")
+
+        api_url = x_github_api_url or "https://api.github.com"
+        client = get_github_client(token, api_url)
+
+        success = await client.mark_notification_as_read(thread_id)
+
+        await client.close()
+
+        if success:
+            return {"status": "marked_as_read", "thread_id": thread_id}
+        else:
+            raise HTTPException(status_code=400, detail="Failed to mark notification as read")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/notifications/mark-all-read")
+async def mark_all_notifications_as_read(
+    x_github_token: Optional[str] = Header(None),
+    x_github_api_url: Optional[str] = Header(None)
+):
+    """Mark all notifications as read"""
+    import httpx
+
+    try:
+        token = x_github_token or (settings.github_token if settings.github_token else None)
+        if not token:
+            raise HTTPException(status_code=401, detail="GitHub token is required")
+
+        api_url = x_github_api_url or "https://api.github.com"
+        client = get_github_client(token, api_url)
+
+        success = await client.mark_all_notifications_as_read()
+
+        await client.close()
+
+        if success:
+            return {"status": "all_marked_as_read"}
+        else:
+            raise HTTPException(status_code=400, detail="Failed to mark all notifications as read")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

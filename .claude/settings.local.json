@@ -5,7 +5,20 @@
       "Bash(py --version)",
       "Bash(py test_config.py)",
       "Bash(py -m pip install:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(py config_cli.py show)",
+      "Bash(curl:*)",
+      "Bash(py config_cli.py:*)",
+      "Bash(npm run dev)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\n탭 네비게이션 추가 및 설정 시스템 개선\n\n- 상단에 탭 메뉴 추가 (Repositories, Dashboard, Activity, Analytics, Notifications)\n- 기존 기능을 Repositories 탭으로 이동\n- 프론트엔드 설정을 백엔드 설정 파일과 연동 (~/.config/jhl-github-desktop)\n- localStorage 폴백을 유지하면서 홈 디렉토리 설정 우선 사용\n- 설정 대화상자에 설정 파일 경로 표시\n- 향후 기능 확장을 위한 플레이스홀더 탭 추가\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(uv sync:*)",
+      "Bash(uv run:*)",
+      "Bash(npm run vite:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\n탭 네비게이션 구조 개선\n\n- Notifications 탭을 제거하고 상단 툴바에 알림 아이콘 추가\n- Dashboard 탭을 Commits 탭으로 변경\n- Activity 탭을 Actions 탭으로 변경\n- 탭 수를 5개에서 4개로 축소하여 UI 간소화\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Read(//c/Users/qmoix/.config/**)",
+      "Read(//c/Users/qmoix/AppData/Roaming/jhl-github-desktop/**)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

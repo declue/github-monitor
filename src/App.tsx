@@ -22,6 +22,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Badge,
 } from '@mui/material';
 import {
   Refresh,
@@ -39,12 +40,13 @@ import { SettingsDialog } from './components/SettingsDialog';
 import { SearchFilter, type SearchFilterState } from './components/SearchFilter';
 import { ListView } from './components/ListView';
 import { TabPanel } from './components/TabPanel';
-import { fetchTree, fetchRateLimit, fetchRepoDetails } from './api';
+import { NotificationsList } from './components/NotificationsList';
+import { fetchTree, fetchRateLimit, fetchRepoDetails, fetchNotificationsCount } from './api';
 import type { TreeNode, RateLimitInfo } from './types';
 import { loadSettings, loadSettingsSync, saveSettings } from './utils/storage';
 import { filterTreeNodes, countTreeNodes, filterEnabledNodes } from './utils/filterTree';
 import { getVersionInfo, ENVIRONMENT } from './config/version';
-import { getEnabledRepos, updateEnabledRepos } from './api/config';
+import { getEnabledRepos, updateEnabledRepos, getConfig } from './api/config';
 
 const darkTheme = createTheme({
   palette: {
@@ -100,84 +102,24 @@ function App() {
   const [warningDialogOpen, setWarningDialogOpen] = useState(false);
   const [pendingDetailLoad, setPendingDetailLoad] = useState<() => void>(() => () => {});
 
+  // Notifications state
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [notificationRefreshInterval, setNotificationRefreshInterval] = useState(15);
+
   // Cache for repository details to avoid redundant API calls
   const repoDetailsCache = useRef<Map<string, TreeNode[]>>(new Map());
+  const notificationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Track whether we've done the initial load
+  const hasLoadedRef = useRef(false);
 
   const versionInfo = getVersionInfo();
   const isDevelopment = ENVIRONMENT === 'development';
   const isProduction = ENVIRONMENT === 'production';
 
-  const loadData = async () => {
-    if (!token) {
-      setError('Please configure your GitHub token in settings');
-      setLoading(false);
-      // Don't automatically open settings dialog
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const [tree, rate, enabledRepos] = await Promise.all([
-        fetchTree(orgs, token, githubApiUrl),
-        fetchRateLimit(token, githubApiUrl),
-        getEnabledRepos().catch(() => []),  // Get saved enabled repos, fallback to empty array
-      ]);
-
-      // Create a map of node_id to enabled status
-      const enabledMap = new Map(enabledRepos.map(repo => [repo.node_id, repo.enabled]));
-
-      // Initialize orgs and repos with saved enabled state or default to true
-      const treeWithEnabled = tree.map(org => ({
-        ...org,
-        enabled: enabledMap.has(org.id) ? enabledMap.get(org.id) : true,
-        children: org.children.map(repo => ({
-          ...repo,
-          enabled: enabledMap.has(repo.id) ? enabledMap.get(repo.id) : true,
-        })),
-      }));
-
-      setTreeData(treeWithEnabled);
-      setFilteredTreeData(treeWithEnabled); // Initialize filtered data
-      setRateLimit(rate);
-
-      // Load details for enabled repositories
-      await loadDetailsForEnabledRepos(treeWithEnabled);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data');
-      console.error('Error loading data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadDetailsForEnabledRepos = async (tree: TreeNode[]) => {
-    // Collect all enabled repositories
-    const enabledRepos: TreeNode[] = [];
-    tree.forEach(org => {
-      if (org.children) {
-        org.children.forEach(repo => {
-          if (repo.type === 'repository' && repo.enabled !== false) {
-            enabledRepos.push(repo);
-          }
-        });
-      }
-    });
-
-    if (enabledRepos.length === 0) return;
-
-    // Show warning dialog if more than 10 repos are enabled
-    if (enabledRepos.length >= 10) {
-      setWarningDialogOpen(true);
-      setPendingDetailLoad(() => () => loadRepoDetails(enabledRepos));
-      return;
-    }
-
-    await loadRepoDetails(enabledRepos);
-  };
-
-  const loadRepoDetails = async (repos: TreeNode[]) => {
+  // Define loadRepoDetails first to avoid circular dependencies
+  const loadRepoDetails = useCallback(async (repos: TreeNode[], currentTree: TreeNode[]) => {
     setLoadingDetails(true);
     setLoadingProgress({ current: 0, total: repos.length });
 
@@ -233,13 +175,163 @@ function App() {
       });
     };
 
-    const updatedTree = updateTreeWithDetails(treeData);
+    const updatedTree = updateTreeWithDetails(currentTree);
     setTreeData(updatedTree);
     setFilteredTreeData(updatedTree);
 
     setLoadingDetails(false);
     setLoadingProgress({ current: 0, total: 0 });
+  }, [token, githubApiUrl]);
+
+  const loadDetailsForEnabledRepos = useCallback(async (tree: TreeNode[]) => {
+    // Collect all enabled repositories
+    const enabledRepos: TreeNode[] = [];
+    tree.forEach(org => {
+      if (org.children) {
+        org.children.forEach(repo => {
+          if (repo.type === 'repository' && repo.enabled !== false) {
+            enabledRepos.push(repo);
+          }
+        });
+      }
+    });
+
+    console.log(`Found ${enabledRepos.length} enabled repos to load details for`);
+    if (enabledRepos.length === 0) return;
+
+    // Show warning dialog if more than 10 repos are enabled
+    if (enabledRepos.length >= 10) {
+      console.log('Too many repos, showing warning dialog');
+      setWarningDialogOpen(true);
+      setPendingDetailLoad(() => () => loadRepoDetails(enabledRepos, tree));
+      return;
+    }
+
+    console.log('Loading repo details...');
+    await loadRepoDetails(enabledRepos, tree);
+  }, [loadRepoDetails]);
+
+  // Load data with specific settings (used for initial load)
+  const loadDataWithSettings = async (settingsToken: string, settingsOrgs: string[], settingsApiUrl: string) => {
+    console.log('loadDataWithSettings called - token:', !!settingsToken, 'orgs:', settingsOrgs);
+
+    if (!settingsToken) {
+      setError('Please configure your GitHub token in settings');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [tree, rate, enabledRepos] = await Promise.all([
+        fetchTree(settingsOrgs, settingsToken, settingsApiUrl),
+        fetchRateLimit(settingsToken, settingsApiUrl),
+        getEnabledRepos().catch(() => []),
+      ]);
+
+      // Debug logging
+      console.log('Fetched tree data:', tree);
+      console.log('Tree data length:', tree?.length);
+
+      // Create a map of node_id to enabled status
+      const enabledMap = new Map(enabledRepos.map(repo => [repo.node_id, repo.enabled]));
+
+      // Initialize orgs and repos with saved enabled state
+      const treeWithEnabled = tree.map(org => ({
+        ...org,
+        enabled: enabledMap.has(org.id) ? enabledMap.get(org.id) : true,
+        children: org.children.map(repo => ({
+          ...repo,
+          enabled: enabledMap.has(repo.id) ? enabledMap.get(repo.id) : true,
+        })),
+      }));
+
+      console.log('Setting tree data with enabled states:', treeWithEnabled);
+      setTreeData(treeWithEnabled);
+      setFilteredTreeData(treeWithEnabled); // Initialize filtered data
+      setRateLimit(rate);
+
+      // Load details for enabled repositories
+      console.log('Auto-loading details for enabled repos...');
+      await loadDetailsForEnabledRepos(treeWithEnabled);
+      console.log('Auto-load of details completed');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load data';
+      setError(errorMessage);
+      console.error('Error loading data:', err);
+    } finally {
+      console.log('loadDataWithSettings finished, setting loading to false');
+      setLoading(false);
+    }
   };
+
+  const loadData = useCallback(async () => {
+    console.log('loadData called - token:', !!token, 'orgs:', orgs);
+
+    if (!token) {
+      setError('Please configure your GitHub token in settings');
+      setLoading(false);
+      // Don't automatically open settings dialog
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [tree, rate, enabledRepos] = await Promise.all([
+        fetchTree(orgs, token, githubApiUrl),
+        fetchRateLimit(token, githubApiUrl),
+        getEnabledRepos().catch(() => []),  // Get saved enabled repos, fallback to empty array
+      ]);
+
+      // Debug logging
+      console.log('Fetched tree data:', tree);
+      console.log('Tree data length:', tree?.length);
+      console.log('Organization:', orgs);
+      console.log('Token exists:', !!token);
+      console.log('API URL:', githubApiUrl);
+
+      // Create a map of node_id to enabled status
+      const enabledMap = new Map(enabledRepos.map(repo => [repo.node_id, repo.enabled]));
+
+      // Initialize orgs and repos with saved enabled state or default to true
+      const treeWithEnabled = tree.map(org => ({
+        ...org,
+        enabled: enabledMap.has(org.id) ? enabledMap.get(org.id) : true,
+        children: org.children.map(repo => ({
+          ...repo,
+          enabled: enabledMap.has(repo.id) ? enabledMap.get(repo.id) : true,
+        })),
+      }));
+
+      console.log('Setting tree data with enabled states:', treeWithEnabled);
+      setTreeData(treeWithEnabled);
+      setFilteredTreeData(treeWithEnabled); // Initialize filtered data
+      setRateLimit(rate);
+
+      // Load details for enabled repositories
+      console.log('Auto-loading details for enabled repos...');
+      await loadDetailsForEnabledRepos(treeWithEnabled);
+      console.log('Auto-load of details completed');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load data';
+      setError(errorMessage);
+      console.error('Error loading data:', err);
+      console.error('Error details:', {
+        message: errorMessage,
+        token: !!token,
+        orgs: orgs,
+        githubApiUrl: githubApiUrl,
+        error: err
+      });
+    } finally {
+      console.log('loadData finished, setting loading to false');
+      setLoading(false);
+    }
+  }, [token, orgs, githubApiUrl, loadDetailsForEnabledRepos]);
 
   const handleFilterChange = useCallback(async (newFilters: SearchFilterState) => {
     const { searchText, selectedTypes } = newFilters;
@@ -336,15 +428,15 @@ function App() {
       if (affectedRepos.length > 0) {
         if (affectedRepos.length >= 10) {
           setWarningDialogOpen(true);
-          setPendingDetailLoad(() => () => loadRepoDetails(affectedRepos));
+          setPendingDetailLoad(() => () => loadRepoDetails(affectedRepos, updatedTree));
         } else {
-          await loadRepoDetails(affectedRepos);
+          await loadRepoDetails(affectedRepos, updatedTree);
         }
       }
     } catch (error) {
       console.error('Failed to save enabled state:', error);
     }
-  }, [treeData]);
+  }, [treeData, loadRepoDetails]);
 
   const handleSaveSettings = async (newToken: string, newOrgs: string[], newGithubApiUrl: string) => {
     setToken(newToken);
@@ -357,6 +449,40 @@ function App() {
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
+  };
+
+  // Check unread notifications count
+  const checkNotifications = useCallback(async () => {
+    if (!token) return;
+
+    try {
+      const response = await fetchNotificationsCount(token, githubApiUrl);
+      setUnreadNotifications(response.unread_count);
+
+      // Update rate limit if provided
+      if (response.rate_limit) {
+        setRateLimit(response.rate_limit);
+      }
+    } catch (error) {
+      console.error('Failed to fetch notifications count:', error);
+    }
+  }, [token, githubApiUrl]);
+
+  // Handle notification icon click
+  const handleNotificationClick = () => {
+    setShowNotifications(true);
+  };
+
+  // Handle back from notifications
+  const handleNotificationBack = () => {
+    setShowNotifications(false);
+    // Refresh notifications count after viewing
+    checkNotifications();
+  };
+
+  // Handle rate limit update from notifications list
+  const handleRateLimitUpdate = (newRateLimit: RateLimitInfo) => {
+    setRateLimit(newRateLimit);
   };
 
   // Load children for a single node (used by TreeView expansion)
@@ -479,60 +605,133 @@ function App() {
     return expandedNodes;
   }, [loadChildrenForNode]);
 
+  // Initialize on mount - Load settings and data
   useEffect(() => {
-    // Load settings from backend and localStorage
-    const initializeSettings = async () => {
+    console.log('=== App component mounted - starting initialization ===');
+    let mounted = true;
+
+    const initializeApp = async () => {
+      console.log('initializeApp called');
       try {
+        // First try to load from backend config
+        console.log('Loading config from backend...');
+        const config = await getConfig();
+        console.log('Backend config loaded:', config);
+        if (config) {
+          setNotificationRefreshInterval(config.notifications_refresh_interval || 15);
+        }
+
         // First try to load from backend
+        console.log('Loading settings from backend...');
         const settings = await loadSettings();
+        console.log('Settings loaded:', settings);
+
+        if (!mounted) return; // Component unmounted
+
         if (settings && settings.token) {
+          console.log('Setting token and orgs from backend');
+          console.log('Token length:', settings.token.length);
+          console.log('Orgs:', settings.orgs);
           setToken(settings.token);
           setOrgs(settings.orgs);
           setGithubApiUrl(settings.githubApiUrl || 'https://api.github.com');
+
+          // Immediately load data after setting token with the loaded values
+          console.log('Settings loaded, immediately loading data with:', settings.token, settings.orgs);
+          if (mounted && !hasLoadedRef.current) {
+            hasLoadedRef.current = true;
+            // Call loadData directly with the loaded settings
+            loadDataWithSettings(settings.token, settings.orgs, settings.githubApiUrl || 'https://api.github.com');
+          }
         } else {
           // Try localStorage as fallback
+          console.log('No backend settings, trying localStorage...');
           const cachedSettings = loadSettingsSync();
+          console.log('Cached settings:', cachedSettings);
           if (cachedSettings && cachedSettings.token) {
+            console.log('Setting token and orgs from localStorage');
             setToken(cachedSettings.token);
             setOrgs(cachedSettings.orgs);
             setGithubApiUrl(cachedSettings.githubApiUrl || 'https://api.github.com');
+
+            // Immediately load data after setting token with cached values
+            console.log('Cached settings loaded, immediately loading data with:', cachedSettings.token, cachedSettings.orgs);
+            if (mounted && !hasLoadedRef.current) {
+              hasLoadedRef.current = true;
+              loadDataWithSettings(cachedSettings.token, cachedSettings.orgs, cachedSettings.githubApiUrl || 'https://api.github.com');
+            }
           } else {
+            console.log('No settings found, showing empty state');
             setLoading(false);
-            // Don't automatically open settings dialog
           }
         }
       } catch (error) {
         console.error('Failed to load settings:', error);
         // Try cached settings as fallback
         const cachedSettings = loadSettingsSync();
-        if (cachedSettings && cachedSettings.token) {
+        if (mounted && cachedSettings && cachedSettings.token) {
+          console.log('Setting token and orgs from localStorage (error fallback)');
           setToken(cachedSettings.token);
           setOrgs(cachedSettings.orgs);
           setGithubApiUrl(cachedSettings.githubApiUrl || 'https://api.github.com');
+
+          // Immediately load data after setting token with cached values
+          console.log('Error fallback - immediately loading data with:', cachedSettings.token, cachedSettings.orgs);
+          if (mounted && !hasLoadedRef.current) {
+            hasLoadedRef.current = true;
+            loadDataWithSettings(cachedSettings.token, cachedSettings.orgs, cachedSettings.githubApiUrl || 'https://api.github.com');
+          }
         } else {
+          console.log('No settings found (error), showing empty state');
           setLoading(false);
-          // Don't automatically open settings dialog
         }
       }
+      console.log('initializeApp completed');
     };
 
-    initializeSettings();
-  }, []);
+    initializeApp();
 
+    return () => {
+      mounted = false;
+    };
+  }, []); // Empty dependency array - run only on mount
+
+  // Separate effect for rate limit refresh
   useEffect(() => {
     if (token) {
-      loadData();
-
       // Refresh rate limit every 30 seconds
       const interval = setInterval(() => {
-        if (token) {
-          fetchRateLimit(token, githubApiUrl).then(setRateLimit).catch(console.error);
-        }
+        fetchRateLimit(token, githubApiUrl).then(setRateLimit).catch(console.error);
       }, 30000);
 
       return () => clearInterval(interval);
     }
-  }, [token, orgs, githubApiUrl]);
+  }, [token, githubApiUrl]);
+
+  // Setup notification background refresh
+  useEffect(() => {
+    if (token && !showNotifications) {
+      // Initial check
+      checkNotifications();
+
+      // Clear existing interval
+      if (notificationIntervalRef.current) {
+        clearInterval(notificationIntervalRef.current);
+      }
+
+      // Setup new interval based on settings
+      const intervalMs = notificationRefreshInterval * 1000;
+      notificationIntervalRef.current = setInterval(() => {
+        checkNotifications();
+      }, intervalMs);
+
+      return () => {
+        if (notificationIntervalRef.current) {
+          clearInterval(notificationIntervalRef.current);
+        }
+      };
+    }
+  }, [token, githubApiUrl, notificationRefreshInterval, showNotifications, checkNotifications]);
 
   return (
     <ThemeProvider theme={darkTheme}>
@@ -565,13 +764,19 @@ function App() {
 
             {rateLimit && <RateLimitDisplay rateLimit={rateLimit} />}
 
-            <Tooltip title="Notifications">
+            <Tooltip title={`Notifications${unreadNotifications > 0 ? ` (${unreadNotifications})` : ''}`}>
               <IconButton
                 color="inherit"
-                onClick={() => {/* TODO: Implement notifications */}}
+                onClick={handleNotificationClick}
                 sx={{ ml: 2 }}
               >
-                <Notifications />
+                <Badge
+                  badgeContent={unreadNotifications}
+                  color="error"
+                  max={99}
+                >
+                  <Notifications />
+                </Badge>
               </IconButton>
             </Tooltip>
 
@@ -588,7 +793,10 @@ function App() {
             <Tooltip title="Refresh data">
               <IconButton
                 color="inherit"
-                onClick={loadData}
+                onClick={() => {
+                  console.log('Manual refresh clicked');
+                  loadData();
+                }}
                 disabled={loading || !token}
                 sx={{ ml: 1 }}
               >
@@ -650,43 +858,53 @@ function App() {
         </Dialog>
 
         <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          {/* Tabs Navigation */}
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
-            <Tabs
-              value={tabValue}
-              onChange={handleTabChange}
-              aria-label="main navigation tabs"
-              variant="fullWidth"
-            >
-              <Tab
-                icon={<AccountTree />}
-                iconPosition="start"
-                label="Repositories"
-                sx={{ minHeight: 48 }}
-              />
-              <Tab
-                icon={<History />}
-                iconPosition="start"
-                label="Commits"
-                sx={{ minHeight: 48 }}
-              />
-              <Tab
-                icon={<PlayCircleOutline />}
-                iconPosition="start"
-                label="Actions"
-                sx={{ minHeight: 48 }}
-              />
-              <Tab
-                icon={<Assessment />}
-                iconPosition="start"
-                label="Analytics"
-                sx={{ minHeight: 48 }}
-              />
-            </Tabs>
-          </Box>
+          {/* Show Notifications List if showNotifications is true */}
+          {showNotifications ? (
+            <NotificationsList
+              token={token}
+              githubApiUrl={githubApiUrl}
+              onBack={handleNotificationBack}
+              onRateLimitUpdate={handleRateLimitUpdate}
+            />
+          ) : (
+            <>
+              {/* Tabs Navigation */}
+              <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+                <Tabs
+                  value={tabValue}
+                  onChange={handleTabChange}
+                  aria-label="main navigation tabs"
+                  variant="fullWidth"
+                >
+                  <Tab
+                    icon={<AccountTree />}
+                    iconPosition="start"
+                    label="Repositories"
+                    sx={{ minHeight: 48 }}
+                  />
+                  <Tab
+                    icon={<History />}
+                    iconPosition="start"
+                    label="Commits"
+                    sx={{ minHeight: 48 }}
+                  />
+                  <Tab
+                    icon={<PlayCircleOutline />}
+                    iconPosition="start"
+                    label="Actions"
+                    sx={{ minHeight: 48 }}
+                  />
+                  <Tab
+                    icon={<Assessment />}
+                    iconPosition="start"
+                    label="Analytics"
+                    sx={{ minHeight: 48 }}
+                  />
+                </Tabs>
+              </Box>
 
-          {/* Tab Panels */}
-          <Box sx={{ flexGrow: 1, overflow: 'hidden', p: 1 }}>
+              {/* Tab Panels */}
+              <Box sx={{ flexGrow: 1, overflow: 'hidden', p: 1 }}>
             {/* Repositories Tab */}
             <TabPanel value={tabValue} index={0} noPadding>
               {loading && (
@@ -751,6 +969,7 @@ function App() {
               {!loading && !error && treeData.length === 0 && (
                 <Alert severity="info">
                   No repositories found. Make sure your GitHub token is configured correctly.
+                  {console.log('Render check - treeData:', treeData, 'loading:', loading, 'error:', error, 'token:', !!token)}
                 </Alert>
               )}
 
@@ -833,6 +1052,8 @@ function App() {
               </Box>
             </TabPanel>
           </Box>
+            </>
+          )}
         </Box>
 
         <Box

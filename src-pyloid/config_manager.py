@@ -46,6 +46,7 @@ class AppConfig(BaseModel):
     enabled_repos: List[EnabledRepo] = Field(default_factory=list)  # Stores which repos are enabled/disabled in TreeView
     ui: UIConfig = Field(default_factory=UIConfig)
     auto_refresh_interval: int = 300  # seconds
+    notifications_refresh_interval: int = 15  # seconds for notifications background refresh
     max_repos_per_org: int = 100
 
 

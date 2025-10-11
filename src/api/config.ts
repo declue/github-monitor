@@ -61,6 +61,11 @@ export async function getConfiguration(): Promise<AppConfig> {
 }
 
 /**
+ * Alias for getConfiguration - used in some components
+ */
+export const getConfig = getConfiguration;
+
+/**
  * Update GitHub configuration
  */
 export async function updateGitHubConfig(

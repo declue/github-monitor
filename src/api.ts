@@ -39,3 +39,99 @@ export const fetchRepoDetails = async (
   const response = await api.get<TreeNode[]>(`/api/repo-details/${owner}/${repo}`, { headers });
   return response.data;
 };
+
+// Notifications API
+
+export interface NotificationItem {
+  id: string;
+  repository: {
+    id: number;
+    name: string;
+    full_name: string;
+    owner: {
+      login: string;
+      avatar_url: string;
+    };
+  };
+  subject: {
+    title: string;
+    url: string;
+    latest_comment_url: string;
+    type: string;
+  };
+  reason: string;
+  unread: boolean;
+  updated_at: string;
+  last_read_at: string | null;
+  url: string;
+}
+
+export interface NotificationsResponse {
+  notifications: NotificationItem[];
+  pagination: {
+    page: number;
+    per_page: number;
+    has_more: boolean;
+  };
+  rate_limit: RateLimitInfo;
+}
+
+export interface NotificationsCountResponse {
+  unread_count: number;
+  rate_limit: RateLimitInfo;
+}
+
+export const fetchNotifications = async (
+  token?: string,
+  githubApiUrl?: string,
+  page: number = 1,
+  per_page: number = 50,
+  all: boolean = false
+): Promise<NotificationsResponse> => {
+  const headers = {
+    ...(token && { 'X-GitHub-Token': token }),
+    ...(githubApiUrl && { 'X-GitHub-API-URL': githubApiUrl }),
+  };
+  const params = {
+    page,
+    per_page,
+    all
+  };
+  const response = await api.get<NotificationsResponse>('/api/notifications', { headers, params });
+  return response.data;
+};
+
+export const fetchNotificationsCount = async (
+  token?: string,
+  githubApiUrl?: string
+): Promise<NotificationsCountResponse> => {
+  const headers = {
+    ...(token && { 'X-GitHub-Token': token }),
+    ...(githubApiUrl && { 'X-GitHub-API-URL': githubApiUrl }),
+  };
+  const response = await api.get<NotificationsCountResponse>('/api/notifications/count', { headers });
+  return response.data;
+};
+
+export const markNotificationAsRead = async (
+  threadId: string,
+  token?: string,
+  githubApiUrl?: string
+): Promise<void> => {
+  const headers = {
+    ...(token && { 'X-GitHub-Token': token }),
+    ...(githubApiUrl && { 'X-GitHub-API-URL': githubApiUrl }),
+  };
+  await api.patch(`/api/notifications/${threadId}/read`, {}, { headers });
+};
+
+export const markAllNotificationsAsRead = async (
+  token?: string,
+  githubApiUrl?: string
+): Promise<void> => {
+  const headers = {
+    ...(token && { 'X-GitHub-Token': token }),
+    ...(githubApiUrl && { 'X-GitHub-API-URL': githubApiUrl }),
+  };
+  await api.put('/api/notifications/mark-all-read', {}, { headers });
+};
