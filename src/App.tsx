@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
-  Container,
   AppBar,
   Toolbar,
   Typography,
@@ -49,6 +48,16 @@ const darkTheme = createTheme({
       styleOverrides: {
         root: {
           backgroundImage: 'none',
+        },
+      },
+    },
+    MuiPaper: {
+      defaultProps: {
+        elevation: 1,
+      },
+      styleOverrides: {
+        root: {
+          borderRadius: 4,
         },
       },
     },
@@ -328,9 +337,9 @@ function App() {
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <AppBar position="static" elevation={0}>
-          <Toolbar>
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+        <AppBar position="static" elevation={0} sx={{ flexShrink: 0 }}>
+          <Toolbar variant="dense">
             <GitHub sx={{ mr: 2 }} />
             <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
               GitHub Actions Runner Monitor
@@ -379,7 +388,7 @@ function App() {
           </Toolbar>
         </AppBar>
 
-        <Container maxWidth={false} sx={{ mt: 4, mb: 4, flexGrow: 1, px: 3 }}>
+        <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', p: 1 }}>
           {loading && (
             <Box
               sx={{
@@ -420,23 +429,26 @@ function App() {
           )}
 
           {!loading && !error && treeData.length > 0 && (
-            <>
-              <SearchFilter onFilterChange={handleFilterChange} />
+            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+              <Box sx={{ flexShrink: 0, mb: 1 }}>
+                <SearchFilter onFilterChange={handleFilterChange} />
+              </Box>
 
-              <Box sx={{ display: 'flex', gap: 2, height: 'calc(100vh - 280px)' }}>
+              <Box sx={{ display: 'flex', gap: 1, flexGrow: 1, overflow: 'hidden' }}>
                 {/* Left side: Tree View */}
                 <Paper
                   elevation={2}
                   sx={{
-                    flex: '0 0 40%',
-                    p: 2,
+                    flex: '1 1 35%',
+                    minWidth: 250,
+                    maxWidth: 500,
+                    p: 1,
                     overflow: 'auto',
                     bgcolor: 'background.paper',
-                    borderRadius: 2,
                   }}
                 >
-                  <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6">
+                  <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
                       Tree View ({countTreeNodes(filteredTreeData)} items)
                     </Typography>
                   </Box>
@@ -448,22 +460,23 @@ function App() {
                 </Paper>
 
                 {/* Right side: List View */}
-                <Box sx={{ flex: '1 1 60%' }}>
+                <Box sx={{ flex: '1 1 65%', overflow: 'hidden' }}>
                   <ListView data={treeData} filteredData={filterEnabledNodes(filteredTreeData)} />
                 </Box>
               </Box>
-            </>
+            </Box>
           )}
-        </Container>
+        </Box>
 
         <Box
           component="footer"
           sx={{
-            py: 2,
+            py: 1,
             px: 2,
-            mt: 'auto',
+            flexShrink: 0,
             backgroundColor: 'background.paper',
             textAlign: 'center',
+            borderTop: '1px solid rgba(255, 255, 255, 0.12)',
           }}
         >
           <Typography variant="body2" color="text.secondary">

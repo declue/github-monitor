@@ -393,8 +393,8 @@ export const ListView: React.FC<ListViewProps> = ({ data, filteredData }) => {
 
   return (
     <Paper elevation={2} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-        <Typography variant="h6" gutterBottom>
+      <Box sx={{ p: 1, borderBottom: 1, borderColor: 'divider' }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 'medium', mb: 1 }}>
           List View ({localFilteredData.length} items)
         </Typography>
         <TextField

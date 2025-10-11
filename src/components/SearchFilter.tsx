@@ -83,8 +83,8 @@ export const SearchFilter: React.FC<SearchFilterProps> = ({ onFilterChange }) =>
   };
 
   return (
-    <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+    <Paper elevation={2} sx={{ p: 1 }}>
+      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
         <TextField
           fullWidth
           label="Search"
