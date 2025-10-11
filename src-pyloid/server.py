@@ -745,3 +745,266 @@ async def mark_all_notifications_as_read(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# Git Operations Endpoints
+
+import subprocess
+import os
+from pathlib import Path
+
+class GitStatusFile(PydanticBaseModel):
+    path: str
+    status: str  # 'modified', 'added', 'deleted', 'renamed', 'untracked'
+    staged: bool
+
+class GitStatus(PydanticBaseModel):
+    files: List[GitStatusFile]
+    branch: str
+    ahead: int
+    behind: int
+
+class GitCommit(PydanticBaseModel):
+    hash: str
+    short_hash: str
+    author: str
+    email: str
+    date: str
+    message: str
+    body: Optional[str] = None
+
+class GitRepoInfo(PydanticBaseModel):
+    path: str
+    name: str
+    branch: str
+    remote_url: Optional[str] = None
+
+def run_git_command(repo_path: str, *args) -> str:
+    """Run a git command in the specified repository"""
+    try:
+        result = subprocess.run(
+            ['git', '-C', repo_path, *args],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Git command failed: {e.stderr}"
+        )
+
+@app.get("/api/git/repos", response_model=List[GitRepoInfo])
+async def get_git_repos():
+    """Get list of git repositories (from enabled repos in config)"""
+    try:
+        config_manager = get_config_manager()
+        enabled_repos = config_manager.get_enabled_repos()
+
+        # For now, return empty list as we need actual local paths
+        # This would need to be enhanced to map GitHub repos to local paths
+        return []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/git/status")
+async def get_git_status(repo_path: str) -> GitStatus:
+    """Get git status for a repository"""
+    try:
+        # Validate repo_path exists and is a git repository
+        if not os.path.exists(repo_path):
+            raise HTTPException(status_code=404, detail="Repository path not found")
+
+        if not os.path.exists(os.path.join(repo_path, '.git')):
+            raise HTTPException(status_code=400, detail="Not a git repository")
+
+        # Get branch name
+        branch = run_git_command(repo_path, 'rev-parse', '--abbrev-ref', 'HEAD').strip()
+
+        # Get ahead/behind counts
+        ahead = 0
+        behind = 0
+        try:
+            ahead_behind = run_git_command(repo_path, 'rev-list', '--left-right', '--count', f'{branch}...@{{u}}').strip()
+            if ahead_behind:
+                parts = ahead_behind.split('\t')
+                ahead = int(parts[0]) if len(parts) > 0 else 0
+                behind = int(parts[1]) if len(parts) > 1 else 0
+        except:
+            pass  # No remote tracking branch
+
+        # Get status
+        status_output = run_git_command(repo_path, 'status', '--porcelain')
+
+        files = []
+        for line in status_output.split('\n'):
+            if not line:
+                continue
+
+            status_code = line[:2]
+            file_path = line[3:]
+
+            # Parse status code
+            staged = False
+            status_text = 'modified'
+
+            if status_code[0] != ' ' and status_code[0] != '?':
+                staged = True
+
+            if status_code == '??':
+                status_text = 'untracked'
+            elif 'M' in status_code:
+                status_text = 'modified'
+            elif 'A' in status_code:
+                status_text = 'added'
+            elif 'D' in status_code:
+                status_text = 'deleted'
+            elif 'R' in status_code:
+                status_text = 'renamed'
+
+            files.append(GitStatusFile(
+                path=file_path,
+                status=status_text,
+                staged=staged
+            ))
+
+        return GitStatus(
+            files=files,
+            branch=branch,
+            ahead=ahead,
+            behind=behind
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/git/log")
+async def get_git_log(repo_path: str, limit: int = 50) -> List[GitCommit]:
+    """Get git commit history"""
+    try:
+        if not os.path.exists(repo_path):
+            raise HTTPException(status_code=404, detail="Repository path not found")
+
+        # Get commits with custom format
+        log_format = '%H%n%h%n%an%n%ae%n%ai%n%s%n%b%n--END--'
+        log_output = run_git_command(repo_path, 'log', f'-{limit}', f'--pretty=format:{log_format}')
+
+        commits = []
+        commit_blocks = log_output.split('--END--\n')
+
+        for block in commit_blocks:
+            if not block.strip():
+                continue
+
+            lines = block.strip().split('\n')
+            if len(lines) < 6:
+                continue
+
+            commit = GitCommit(
+                hash=lines[0],
+                short_hash=lines[1],
+                author=lines[2],
+                email=lines[3],
+                date=lines[4],
+                message=lines[5],
+                body='\n'.join(lines[6:]) if len(lines) > 6 else None
+            )
+            commits.append(commit)
+
+        return commits
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/git/diff")
+async def get_git_diff(repo_path: str, file_path: Optional[str] = None, staged: bool = False):
+    """Get git diff for files"""
+    try:
+        if not os.path.exists(repo_path):
+            raise HTTPException(status_code=404, detail="Repository path not found")
+
+        args = ['diff']
+        if staged:
+            args.append('--cached')
+        if file_path:
+            args.append('--')
+            args.append(file_path)
+
+        diff_output = run_git_command(repo_path, *args)
+
+        return {
+            "diff": diff_output,
+            "file_path": file_path,
+            "staged": staged
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/git/add")
+async def git_add(repo_path: str, files: List[str]):
+    """Stage files for commit"""
+    try:
+        if not os.path.exists(repo_path):
+            raise HTTPException(status_code=404, detail="Repository path not found")
+
+        for file in files:
+            run_git_command(repo_path, 'add', file)
+
+        return {"status": "success", "files": files}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/git/reset")
+async def git_reset(repo_path: str, files: List[str]):
+    """Unstage files"""
+    try:
+        if not os.path.exists(repo_path):
+            raise HTTPException(status_code=404, detail="Repository path not found")
+
+        for file in files:
+            run_git_command(repo_path, 'reset', 'HEAD', file)
+
+        return {"status": "success", "files": files}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class CommitRequest(PydanticBaseModel):
+    repo_path: str
+    message: str
+    description: Optional[str] = None
+
+@app.post("/api/git/commit")
+async def git_commit(request: CommitRequest):
+    """Create a git commit"""
+    try:
+        if not os.path.exists(request.repo_path):
+            raise HTTPException(status_code=404, detail="Repository path not found")
+
+        # Combine message and description
+        full_message = request.message
+        if request.description:
+            full_message += f"\n\n{request.description}"
+
+        run_git_command(request.repo_path, 'commit', '-m', full_message)
+
+        # Get the commit hash
+        commit_hash = run_git_command(request.repo_path, 'rev-parse', 'HEAD').strip()
+
+        return {
+            "status": "success",
+            "commit_hash": commit_hash,
+            "message": request.message
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -41,6 +41,7 @@ import { SearchFilter, type SearchFilterState } from './components/SearchFilter'
 import { ListView } from './components/ListView';
 import { TabPanel } from './components/TabPanel';
 import { NotificationsList } from './components/NotificationsList';
+import { CommitsTab } from './components/CommitsTab';
 import { fetchTree, fetchRateLimit, fetchRepoDetails, fetchNotificationsCount } from './api';
 import type { TreeNode, RateLimitInfo } from './types';
 import { loadSettings, loadSettingsSync, saveSettings } from './utils/storage';
@@ -1159,16 +1160,8 @@ function App() {
             </TabPanel>
 
             {/* Commits Tab */}
-            <TabPanel value={tabValue} index={1}>
-              <Box sx={{ p: 3, textAlign: 'center' }}>
-                <History sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                <Typography variant="h5" gutterBottom>
-                  Commits
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  선택된 Repository에 대해 Commit 현황을 확인하고 AI Agent를 이용하여 Commit을 할 수 있습니다.
-                </Typography>
-              </Box>
+            <TabPanel value={tabValue} index={1} noPadding>
+              <CommitsTab />
             </TabPanel>
 
             {/* Actions Tab */}

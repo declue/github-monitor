@@ -156,3 +156,6 @@ export const markAllNotificationsAsRead = async (
   };
   await api.put('/api/notifications/mark-all-read', {}, { headers });
 };
+
+// Export Git API functions
+export * from './api/git';
