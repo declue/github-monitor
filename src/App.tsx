@@ -641,7 +641,7 @@ function App() {
           }}
         >
           <Typography variant="body2" color="text.secondary">
-            JHL GitHub Desktop v{versionInfo.version} - Monitor your development status at a glance
+            JHL GitHub Desktop v{versionInfo.version}
           </Typography>
           {isDevelopment && (
             <Typography variant="caption" color="warning.main" display="block" sx={{ mt: 0.5 }}>

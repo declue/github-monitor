@@ -428,21 +428,24 @@ async def get_configuration():
     return config_manager.get_config()
 
 
-@app.post("/api/config/github")
-async def update_github_config(
-    token: Optional[str] = None,
-    api_url: Optional[str] = None,
+from pydantic import BaseModel as PydanticBaseModel
+
+class GitHubConfigUpdate(PydanticBaseModel):
+    token: Optional[str] = None
+    api_url: Optional[str] = None
     organization: Optional[str] = None
-):
+
+@app.post("/api/config/github")
+async def update_github_config(config_update: GitHubConfigUpdate):
     """Update GitHub configuration"""
     config_manager = get_config_manager()
 
-    if token is not None:
-        config_manager.update_github_token(token)
-    if api_url is not None:
-        config_manager.update_github_api_url(api_url)
-    if organization is not None:
-        config_manager.update_github_organization(organization)
+    if config_update.token is not None:
+        config_manager.update_github_token(config_update.token)
+    if config_update.api_url is not None:
+        config_manager.update_github_api_url(config_update.api_url)
+    if config_update.organization is not None:
+        config_manager.update_github_organization(config_update.organization)
 
     # Reload settings to apply changes
     from config import load_settings

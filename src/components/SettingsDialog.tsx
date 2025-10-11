@@ -84,7 +84,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
         <Box display="flex" alignItems="center" justifyContent="space-between">
-          <Typography variant="h6">Settings</Typography>
+          <Typography variant="h6">설정</Typography>
           <IconButton onClick={onClose} size="small">
             <Close />
           </IconButton>
@@ -95,8 +95,8 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         <Stack spacing={3} sx={{ mt: 1 }}>
           <Alert severity="info" sx={{ mb: 2 }}>
             <Typography variant="body2">
-              Settings are stored in your home directory configuration file.
-              Your token is never sent to any server except GitHub API.
+              설정은 홈 디렉토리의 설정 파일에 저장됩니다.
+              토큰은 GitHub API 외에 다른 서버로 전송되지 않습니다.
             </Typography>
             {configPath && (
               <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -119,9 +119,9 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
               placeholder="https://api.github.com"
             />
             <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-              For GitHub.com use: <strong>https://api.github.com</strong>
+              GitHub.com 사용: <strong>https://api.github.com</strong>
               <br />
-              For Enterprise use: <strong>https://github.company.com/api/v3</strong>
+              GitHub Enterprise 사용: <strong>https://github.company.com/api/v3</strong>
             </Typography>
           </Box>
 
@@ -150,16 +150,16 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
               }}
             />
             <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-              Required permissions: repo, workflow, read:org
+              필수 권한: repo, workflow, read:org
             </Typography>
           </Box>
 
           <Box>
             <Typography variant="subtitle2" gutterBottom>
-              Organizations / Users
+              Organization / User
             </Typography>
             <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-              Leave empty to show all accessible repositories
+              비워두면 접근 가능한 모든 저장소를 표시합니다
             </Typography>
 
             <Box display="flex" gap={1} mb={2}>
@@ -169,7 +169,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                 value={newOrg}
                 onChange={(e) => setNewOrg(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Add organization or username"
+                placeholder="Organization 또는 사용자명 추가"
               />
               <Button
                 variant="contained"
@@ -177,7 +177,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                 disabled={!newOrg.trim()}
                 startIcon={<Add />}
               >
-                Add
+                추가
               </Button>
             </Box>
 
@@ -199,29 +199,29 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
 
           <Alert severity="warning">
             <Typography variant="body2">
-              <strong>How to create a GitHub Token:</strong>
+              <strong>GitHub Token 생성 방법:</strong>
             </Typography>
             <Typography variant="caption" component="div" sx={{ mt: 1 }}>
-              1. Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
+              1. GitHub 설정 → Developer settings → Personal access tokens → Tokens (classic) 이동
               <br />
-              2. Click "Generate new token (classic)"
+              2. "Generate new token (classic)" 클릭
               <br />
-              3. Select scopes: <strong>repo</strong>, <strong>workflow</strong>, <strong>read:org</strong>
+              3. 권한 선택: <strong>repo</strong>, <strong>workflow</strong>, <strong>read:org</strong>
               <br />
-              4. Copy the generated token and paste it above
+              4. 생성된 토큰을 복사하여 위에 붙여넣기
             </Typography>
           </Alert>
         </Stack>
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>취소</Button>
         <Button
           onClick={handleSave}
           variant="contained"
           disabled={!token.trim()}
         >
-          Save Settings
+          설정 저장
         </Button>
       </DialogActions>
     </Dialog>

@@ -11,8 +11,8 @@ export interface Settings {
  */
 export const saveSettings = async (settings: Settings): Promise<void> => {
   try {
-    // Parse organization string to get the organization name
-    const organization = settings.orgs && settings.orgs.length > 0 ? settings.orgs[0] : undefined;
+    // Join all organizations with comma for backend
+    const organization = settings.orgs && settings.orgs.length > 0 ? settings.orgs.join(',') : undefined;
 
     await updateGitHubConfig(
       settings.token,
@@ -40,16 +40,24 @@ export const loadSettings = async (): Promise<Settings | null> => {
     // Check if config has github property (not just if token exists)
     if (config && config.github) {
       // Convert backend format to frontend format
+      // Parse comma-separated organizations
+      let orgs: string[] = [];
+      if (config.github.organization) {
+        orgs = config.github.organization.split(',').map((org: string) => org.trim()).filter((org: string) => org.length > 0);
+      }
+
       const settings: Settings = {
         token: config.github.token || '',
-        orgs: config.github.organization ? [config.github.organization] : [],
+        orgs: orgs,
         githubApiUrl: config.github.api_url || 'https://api.github.com',
       };
 
-      // Cache in localStorage
-      localStorage.setItem('github_explorer_settings', JSON.stringify(settings));
-
-      return settings;
+      // Only return settings if token exists
+      if (settings.token) {
+        // Cache in localStorage
+        localStorage.setItem('github_explorer_settings', JSON.stringify(settings));
+        return settings;
+      }
     }
 
     // Fallback to localStorage if backend doesn't have settings
